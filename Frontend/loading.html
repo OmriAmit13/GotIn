@@ -19,11 +19,12 @@
         }
 
         const servers = [
-          'http://192.168.0.18:5000/TelAviv',
-          'http://192.168.0.18:5001/TelAviv',
-          'http://192.168.0.18:5002/TelAviv',
-          'http://192.168.0.18:5003/TelAviv'
+          'http://127.0.0.1:5000/TelAviv'
         ];
+
+        const serverToUniDict = {
+          "http://127.0.0.1:5000/TelAviv": 'אוניברסיטת תל אביב'
+        };
 
         const promises = servers.map(async server => {
           try {
@@ -41,13 +42,13 @@
 
             const result = await response.json();
             return {
-              server: server,
+              university: serverToUniDict[server],
               status: 'success',
               data: result
             };
           } catch (error) {
             return {
-              server: server,
+              university: serverToUniDict[server],
               status: 'error',
               error: error.message
             };
