@@ -109,6 +109,7 @@
                         const errorDetails = document.createElement('p');
                         errorDetails.className = 'error-details';
                         errorDetails.textContent = `${serverResult.error} \n ${serverResult.stackTrace}`;
+                        resultItem.appendChild(errorDetails);
                     }
 
                     resultsContainer.appendChild(resultItem);
