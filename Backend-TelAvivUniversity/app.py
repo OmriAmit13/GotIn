@@ -11,12 +11,11 @@ CORS(app)
 ### general variables ###
 chrome_options = Options()
 chrome_options.add_argument("--headless")
-service = Service("./chromedriver-win64/chromedriver.exe")
 
 # Route for Tel Aviv University analysis
 @app.route('/TelAviv', methods=['POST'])
 def tel_aviv_handler():
-    tel_aviv_university = TelAvivUniversity(service, chrome_options)
+    tel_aviv_university = TelAvivUniversity(chrome_options)
     try:
         request_data = request.get_json()
         result = tel_aviv_university.run(request_data)

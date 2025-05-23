@@ -113,8 +113,8 @@ class TelAvivUniversity():
 
     ### methods ###
 
-    def __init__(self, service, options):
-        self.service = service
+    def __init__(self, options):
+        self.service = Service(ChromeDriverManager().install())
         self.options = options
 
     # This method will be executed when the thread starts
@@ -164,7 +164,7 @@ class TelAvivUniversity():
                 special_subjects.append(scores.pop(subject))
 
         # Provide the correct path to your ChromeDriver executable
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=self.options)
+        driver = webdriver.Chrome(service=self.service, options=self.options)
         driver.get("https://www.ims.tau.ac.il/md/calc/Bagrut.aspx")
 
         # extract the form element
@@ -247,7 +247,7 @@ class TelAvivUniversity():
         highschool_score = self.get_tlv_highschool_score(hs_dict)
         
         # Provide the correct path to your ChromeDriver executable
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=self.options)
+        driver = webdriver.Chrome(service=self.service, options=self.options)
         driver.get("https://go.tau.ac.il/he/calculator")
         
         # extract the input elements from the form
@@ -297,7 +297,7 @@ class TelAvivUniversity():
         url = self.subject_url_dict[inputJson["subject"]]
 
         # Provide the correct path to your ChromeDriver executable
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=self.options)
+        driver = webdriver.Chrome(service=self.service, options=self.options)
         driver.get(url)
 
         # Wait for the popup close button to appear and click it
@@ -344,10 +344,9 @@ class TelAvivUniversity():
 
 
 if __name__ == '__main__':
-    service = Service("./chromedriver-win64/chromedriver.exe")
     options = Options()
     options.add_argument("--headless")  # Run in headless mode (no GUI)
-    uni = TelAvivUniversity(service, options)
+    uni = TelAvivUniversity(options)
 
     # Load the input JSON file
     with open("input.json", "r", encoding="utf-8") as file:
