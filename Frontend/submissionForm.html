@@ -394,6 +394,21 @@
                 return;
             }
 
+            // Validate high school scores
+            const entries = document.querySelectorAll('.subject-entry');
+            for (const entry of entries) {
+                const score = entry.querySelector('input[type="number"]').value;
+                const units = entry.querySelector('select:last-of-type').value;
+                if (score < 0 || score > 100) {
+                    alert('ציון בגרות חייב להיות בין 0 ל-100');
+                    return;
+                }
+                if (units === '') {
+                    alert('יש לבחור יחידות לימוד');
+                    return;
+                }
+            }
+
             // Validate total high school units
             const totalUnits = Object.values(formData.highschool_scores)
                 .reduce((sum, [_, units]) => sum + parseInt(units), 0);
