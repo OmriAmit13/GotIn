@@ -1,0 +1,88 @@
+:root {
+    --primary-color: #2196F3;
+    --primary-dark: #1976D2;
+    --secondary-color: #FFF;
+    --text-color: #333;
+    --shadow-color: rgba(0, 0, 0, 0.1);
+}
+
+body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    direction: rtl;
+    text-align: right;
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(135deg, #f5f7fa 0%, #e4e8ef 100%);
+    min-height: 100vh;
+    color: var(--text-color);
+}
+
+.landing-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    text-align: center;
+    padding: 2rem 1rem;
+}
+
+.site-title {
+    font-size: 6rem;
+    color: var(--primary-color);
+    margin: 1rem 0 0.5rem;
+    text-shadow: 2px 2px 4px var(--shadow-color);
+}
+
+.site-subtitle {
+    font-size: 2rem;
+    color: var(--text-color);
+    margin: 0 0 3rem;
+    font-weight: normal;
+}
+
+.hero-container {
+    background: var(--secondary-color);
+    padding: 3rem;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px var(--shadow-color);
+    max-width: 600px;
+    width: 90%;
+    margin-bottom: 2rem;
+}
+
+.welcome-text {
+    font-size: 1.2rem;
+    line-height: 1.6;
+    margin: 0;
+    color: var(--text-color);
+}
+
+.start-button {
+    font-size: 1.2rem;
+    padding: 1rem 3rem;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: background-color 0.3s, box-shadow 0.3s;
+}
+
+.start-button:hover {
+    background: var(--primary-dark);
+    box-shadow: 0 5px 15px var(--shadow-color);
+}
+
+@media (max-width: 768px) {
+    .hero-container {
+        padding: 2rem;
+    }
+
+    .site-title {
+        font-size: 4rem;
+    }
+
+    .site-subtitle {
+        font-size: 1.5rem;
+    }
+}

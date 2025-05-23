@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>תוצאות התאמה</title>
+    <link rel="stylesheet" href="results.css">
+</head>
+<body>
+    <h1 class="site-title">GotIn</h1>
+    <div class="container">
+        <div class="loading" id="loading">טוען תוצאות...</div>
+        <div class="error-message" id="error">לא נמצאו תוצאות. אנא נסה שוב.</div>
+        <div class="results-content" id="results">
+            <h2 class="results-header">תוצאות התאמה</h2>
+            <div id="resultsContainer"></div>
+        </div>
+        <a href="submissionForm.html" class="back-button">חזור לטופס</a>
+    </div>
+
+    <!-- <script src="test.js"></script> -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const loading = document.getElementById('loading');
+            const error = document.getElementById('error');
+            const results = document.getElementById('results');
+            const resultsContainer = document.getElementById('resultsContainer');
+
+            loading.style.display = 'block';
+            results.style.display = 'none';
+            error.style.display = 'none';
+
+            try {
+                // Check for submission error first
+                const submissionError = localStorage.getItem('submissionError');
+                if (submissionError) {
+                    localStorage.removeItem('submissionError');
+                    throw new Error(submissionError);
+                }
+
+                const resultData = JSON.parse(localStorage.getItem('resultData'));
+                if (!resultData) {
+                    throw new Error('No data found');
+                }
+
+                // Clear any previous results and localStorage
+                resultsContainer.innerHTML = '';
+                localStorage.removeItem('resultData');
+
+                // Display the results from each server
+                resultData.forEach(serverResult => {
+                    const resultItem = document.createElement('div');
+                    resultItem.className = `result-item ${serverResult.status}`;
+                    
+                    // Create server header
+                    const serverHeader = document.createElement('h3');
+                    serverHeader.textContent = `Server: ${serverResult.server}`;
+                    resultItem.appendChild(serverHeader);
+
+                    if (serverResult.status === 'success') {
+                        // Display successful response data
+                        if (typeof serverResult.data === 'object') {
+                            Object.entries(serverResult.data).forEach(([key, value]) => {
+                                // Handle URL
+                                if (key === 'url') {
+                                    const p = document.createElement('p');
+                                    p.textContent = "למידע נוסף: ";
+                                    const link = document.createElement('a');
+                                    link.href = value;
+                                    link.target = '_blank';
+                                    link.textContent = value;
+                                    p.appendChild(link);
+                                    resultItem.appendChild(p);
+                                }
+                                // Handle acceptance status
+                                else if (key === 'isAccepted') {
+                                    const p = document.createElement('p');
+                                    p.innerHTML = `<strong>${value}</strong>`;
+                                    
+                                    // Add color class based on status
+                                    if (value === 'קבלה') {
+                                        resultItem.classList.add('kabala');
+                                    } else if (value === 'דחייה') {
+                                        resultItem.classList.add('dkhiya');
+                                    } else if (value === 'רשימת המתנה') {
+                                        resultItem.classList.add('waiting');
+                                    }
+                                    
+                                    resultItem.appendChild(p);
+                                }
+                                // Handle message
+                                else if (key === 'message' && value && value.trim() !== '') {
+                                    const p = document.createElement('p');
+                                    p.textContent = value;
+                                    resultItem.appendChild(p);
+                                }
+                            });
+                        } else {
+                            const p = document.createElement('p');
+                            p.textContent = serverResult.data;
+                            resultItem.appendChild(p);
+                        }
+                    } else {
+                        // Display error message in Hebrew
+                        const errorMsg = document.createElement('p');
+                        errorMsg.className = 'error-message';
+                        errorMsg.textContent = "תקלה בהבאת הנתונים";
+                        resultItem.appendChild(errorMsg);
+                    }
+
+                    resultsContainer.appendChild(resultItem);
+                });
+
+                loading.style.display = 'none';
+                results.style.display = 'block';
+            } catch (err) {
+                loading.style.display = 'none';
+                error.style.display = 'block';
+                console.error('Error displaying results:', err);
+            }
+        });
+    </script>
+</body>
+</html>

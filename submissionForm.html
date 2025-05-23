@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>בדיקת קבלה לאוניברסיטה</title>
+    <link rel="stylesheet" href="submissionForm.css">
+</head>
+<body>
+    <h1 class="site-title">GotIn</h1>
+    <div class="container">
+        <!-- Progress Bar -->
+        <div class="progress-bar">
+            <div class="step active" data-step="1" onclick="goToStep(1)">
+                <span class="step-number">1</span>
+                <span class="step-text">ציוני פסיכומטרי</span>
+            </div>
+            <div class="step" data-step="2" onclick="goToStep(2)">
+                <span class="step-number">2</span>
+                <span class="step-text">ציוני בגרות</span>
+            </div>
+            <div class="step" data-step="3" onclick="goToStep(3)">
+                <span class="step-number">3</span>
+                <span class="step-text">בחירת תואר</span>
+            </div>
+        </div>
+
+        <form id="admissionForm">
+            <!-- Step 1: Psychometric Scores -->
+            <div class="form-step active" id="step1">
+                <h2>ציוני פסיכומטרי</h2>
+                <div class="score-field">
+                    <label class="required">ציון פסיכומטרי</label>
+                    <input type="number" id="generalScore" required>
+                </div>
+                <div class="score-field">
+                    <label class="required">ציון כמותי בפסיכומטרי</label>
+                    <input type="number" id="quantitativeScore" required>
+                </div>
+                <div class="score-field">
+                    <label class="required">ציון מילולי בפסיכומטרי</label>
+                    <input type="number" id="verbalScore" required>
+                </div>
+                <div class="score-field">
+                    <label class="required">ציון אנגלית בפסיכומטרי</label>
+                    <input type="number" id="englishScore" required>
+                </div>
+                <div class="nav-buttons">
+                    <button type="button" class="next-btn" onclick="nextStep(2)">הבא</button>
+                </div>
+            </div>
+
+            <!-- Step 2: High School Grades -->
+            <div class="form-step" id="step2">
+                <h2>ציוני בגרות</h2>
+                <div id="subjectsContainer">
+                    <!-- Fixed Subjects -->
+                    <div class="subject-entry">
+                        <select disabled>
+                            <option value="עברית: הבנה, הבעה ולשון">עברית: הבנה, הבעה ולשון</option>
+                        </select>
+                        <input type="number" placeholder="ציון" required max="100" min="0" step="1" class="required">
+                        <select class="required" required>
+                            <option value="">בחר יחידות</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                        </select>
+                    </div>
+                    <div class="subject-entry">
+                        <select disabled>
+                            <option value="מתמטיקה">מתמטיקה</option>
+                        </select>
+                        <input type="number" placeholder="ציון" required max="100" min="0" step="1" class="required">
+                        <select class="required" required>
+                            <option value="">בחר יחידות</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                        </select>
+                    </div>
+                    <div class="subject-entry">
+                        <select disabled>
+                            <option value="אנגלית">אנגלית</option>
+                        </select>
+                        <input type="number" placeholder="ציון" required max="100" min="0" step="1" class="required">
+                        <select class="required" required>
+                            <option value="">בחר יחידות</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                        </select>
+                    </div>
+                    <div class="subject-entry">
+                        <select disabled>
+                            <option value="היסטוריה">היסטוריה</option>
+                        </select>
+                        <input type="number" placeholder="ציון" required max="100" min="0" step="1" class="required">
+                        <select class="required" required>
+                            <option value="">בחר יחידות</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                        </select>
+                    </div>
+                    <div class="subject-entry">
+                        <select disabled>
+                            <option value="אזרחות">אזרחות</option>
+                        </select>
+                        <input type="number" placeholder="ציון" required max="100" min="0" step="1" class="required">
+                        <select class="required" required>
+                            <option value="">בחר יחידות</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                        </select>
+                    </div>
+                    <div class="subject-entry">
+                        <select disabled>
+                            <option value="ספרות">ספרות</option>
+                        </select>
+                        <input type="number" placeholder="ציון" required max="100" min="0" step="1" class="required">
+                        <select class="required" required>
+                            <option value="">בחר יחידות</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                        </select>
+                    </div>
+                    <div class="subject-entry">
+                        <select disabled>
+                            <option value='תנ"ך'>תנ"ך</option>
+                        </select>
+                        <input type="number" placeholder="ציון" required max="100" min="0" step="1" class="required">
+                        <select class="required" required>
+                            <option value="">בחר יחידות</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="button" onclick="addSubject()">הוסף מקצוע</button>
+                <div class="nav-buttons">
+                    <button type="button" class="back-btn" onclick="prevStep(1)">חזרה</button>
+                    <button type="button" class="next-btn" onclick="nextStep(3)">הבא</button>
+                </div>
+            </div>
+
+            <!-- Step 3: Degree Selection -->
+            <div class="form-step" id="step3">
+                <h2>בחירת תואר</h2>
+                <div class="degree-selection">
+                    <label class="required">בחר תואר</label>
+                    <select id="degree" required>
+                        <option value="">בחר תואר</option>
+                        <option value="הנדסה אזרחית">הנדסה אזרחית</option>
+                        <option value="הנדסה ביוטכנולוגית">הנדסה ביוטכנולוגית</option>
+                        <option value="הנדסה ביורפואית">הנדסה ביורפואית</option>
+                        <option value="הנדסת חומרים">הנדסת חומרים</option>
+                        <option value="הנדסת חשמל">הנדסת חשמל</option>
+                        <option value="הנדסת מכונות">הנדסת מכונות</option>
+                        <option value="הנדסת תוכנה">הנדסת תוכנה</option>
+                        <option value="הנדסה תעשייה וניהול">הנדסה תעשייה וניהול</option>
+                        <option value="חינוך והוראה">חינוך והוראה</option>
+                        <option value="כלכלה">כלכלה</option>
+                        <option value="מדעי המוח וקוגניציה">מדעי המוח וקוגניציה</option>
+                        <option value="מדעי המחשב">מדעי המחשב</option>
+                        <option value="מנהל עסקים">מנהל עסקים</option>
+                        <option value="משפטים">משפטים</option>
+                        <option value="מתמטיקה">מתמטיקה</option>
+                        <option value="סיעוד">סיעוד</option>
+                        <option value="עבודה סוציאלית">עבודה סוציאלית</option>
+                        <option value="פיזיותרפיה">פיזיותרפיה</option>
+                        <option value="פיזיקה">פיזיקה</option>
+                        <option value="פסיכולוגיה">פסיכולוגיה</option>
+                        <option value="רפואה">רפואה</option>
+                        <option value="ריפוי בעיסוק">ריפוי בעיסוק</option>
+                    </select>
+                </div>
+                <div class="nav-buttons">
+                    <button type="button" onclick="submitForm()">בדוק התאמה</button>
+                    <button type="button" class="back-btn" onclick="prevStep(2)">חזרה</button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        let currentStep = 1;
+        const formData = {
+            psychometric: {},
+            highschool_scores: {},
+            subject: ''
+        };
+
+        function checkStepCompletion(step) {
+            if (step === 1) {
+                const scores = [
+                    document.getElementById('generalScore').value,
+                    document.getElementById('quantitativeScore').value,
+                    document.getElementById('verbalScore').value,
+                    document.getElementById('englishScore').value
+                ];
+                return scores.every(score => score !== '');
+            } else if (step === 2) {
+                const entries = document.querySelectorAll('.subject-entry');
+                return Array.from(entries).every(entry => {
+                    const score = entry.querySelector('input[type="number"]').value;
+                    const units = entry.querySelector('select:last-of-type').value;
+                    return score !== '' && units !== '';
+                });
+            } else if (step === 3) {
+                return document.getElementById('degree').value !== '';
+            }
+            return false;
+        }
+
+        function saveStepData(step) {
+            if (step === 1) {
+                formData.psychometric = {
+                    general: document.getElementById('generalScore').value,
+                    quantitative: document.getElementById('quantitativeScore').value,
+                    verbal: document.getElementById('verbalScore').value,
+                    english: document.getElementById('englishScore').value
+                };
+            } else if (step === 2) {
+                formData.highschool_scores = {};
+                document.querySelectorAll('.subject-entry').forEach(entry => {
+                    const subject = entry.children[0].value;
+                    const score = entry.children[1].value;
+                    const units = entry.children[2].value;
+                    formData.highschool_scores[subject] = [score, units];
+                });
+            } else if (step === 3) {
+                formData.subject = document.getElementById('degree').value;
+            }
+        }
+
+        function loadStepData(step) {
+            if (step === 1 && formData.psychometric) {
+                document.getElementById('generalScore').value = formData.psychometric.general || '';
+                document.getElementById('quantitativeScore').value = formData.psychometric.quantitative || '';
+                document.getElementById('verbalScore').value = formData.psychometric.verbal || '';
+                document.getElementById('englishScore').value = formData.psychometric.english || '';
+            } else if (step === 3 && formData.subject) {
+                document.getElementById('degree').value = formData.subject;
+            }
+        }
+
+        function updateProgressBar(step) {
+            document.querySelectorAll('.step').forEach(el => {
+                el.classList.remove('active');
+                const stepNum = parseInt(el.dataset.step);
+                
+                if (stepNum === step) {
+                    el.classList.add('active');
+                } 
+                
+                // Update completion status independently
+                if (checkStepCompletion(stepNum)) {
+                    el.classList.add('completed');
+                } else {
+                    el.classList.remove('completed');
+                }
+            });
+        }
+
+        function goToStep(step) {
+            if (step === currentStep) return;
+            saveStepData(currentStep);
+            
+            document.getElementById(`step${currentStep}`).classList.remove('active');
+            document.getElementById(`step${step}`).classList.add('active');
+
+            currentStep = step;
+            updateProgressBar(step);
+            loadStepData(step);
+        }
+
+        function nextStep(step) {
+            goToStep(step);
+        }
+
+        function prevStep(step) {
+            goToStep(step);
+        }
+
+        function addSubject() {
+            const container = document.getElementById('subjectsContainer');
+            const div = document.createElement('div');
+            div.classList.add('subject-entry');
+            div.innerHTML = `
+                <select>
+                    <option value="">בחר מקצוע</option>
+                    <option value="אלקטרוניקה">אלקטרוניקה</option>
+                    <option value="אמהרית">אמהרית</option>
+                    <option value="אמנות חזותית">אמנות חזותית</option>
+                    <option value="ביולוגיה">ביולוגיה</option>
+                    <option value="גיאוגרפיה">גיאוגרפיה</option>
+                    <option value="גרמנית">גרמנית</option>
+                    <option value="הנדסת מכונות">הנדסת מכונות</option>
+                    <option value="הנדסת תוכנה">הנדסת תוכנה</option>
+                    <option value="היסטוריה של עם ישראל">היסטוריה של עם ישראל</option>
+                    <option value="חינוך גופני">חינוך גופני</option>
+                    <option value="חינוך פיננסי">חינוך פיננסי</option>
+                    <option value="יפנית">יפנית</option>
+                    <option value="כימיה">כימיה</option>
+                    <option value="לימודי ארץ ישראל וארכיאולוגיה">לימודי ארץ ישראל וארכיאולוגיה</option>
+                    <option value="מדע וטכנולוגיה לכל (מוט"ל)">מדע וטכנולוגיה לכל (מוט"ל)</option>
+                    <option value="מדעי המחשב">מדעי המחשב</option>
+                    <option value="מדעי הסביבה">מדעי הסביבה</option>
+                    <option value="מדעי החברה">מדעי החברה</option>
+                    <option value="מוזיקה">מוזיקה</option>
+                    <option value="מחול">מחול</option>
+                    <option value="מחשבת ישראל">מחשבת ישראל</option>
+                    <option value="מכטרוניקה">מכטרוניקה</option>
+                    <option value="מערכות בקרה">מערכות בקרה</option>
+                    <option value="מערכות חשמל">מערכות חשמל</option>
+                    <option value="מערכות מידע">מערכות מידע</option>
+                    <option value="מערכות תקשורת">מערכות תקשורת</option>
+                    <option value="מורשת דרוזית">מורשת דרוזית</option>
+                    <option value="מורשת ודת נוצרית">מורשת ודת נוצרית</option>
+                    <option value="סוציולוגיה">סוציולוגיה</option>
+                    <option value="סינית">סינית</option>
+                    <option value="ספרדית">ספרדית</option>
+                    <option value="ספרות">ספרות</option>
+                    <option value="ערבית (ליהודים)">ערבית (ליהודים)</option>
+                    <option value="עיצוב אופנה">עיצוב אופנה</option>
+                    <option value="עיצוב גרפי">עיצוב גרפי</option>
+                    <option value="עיצוב פנים">עיצוב פנים</option>
+                    <option value="עיצוב תעשייתי">עיצוב תעשייתי</option>
+                    <option value="פורטוגזית">פורטוגזית</option>
+                    <option value="פיזיקה">פיזיקה</option>
+                    <option value="פילוסופיה">פילוסופיה</option>
+                    <option value="פסיכולוגיה">פסיכולוגיה</option>
+                    <option value="צרפתית">צרפתית</option>
+                    <option value="קולנוע">קולנוע</option>
+                    <option value="רוסית">רוסית</option>
+                    <option value="תיאטרון">תיאטרון</option>
+                    <option value="תושב"ע">תושב"ע</option>
+                    <option value="תלמוד">תלמוד</option>
+                    <option value="תרבות יהודית-ישראלית">תרבות יהודית-ישראלית</option>
+                    <option value="תרבות ומורשת האסלאם">תרבות ומורשת האסלאם</option>
+                </select>
+                <input type="number" placeholder="ציון" class="required">
+                <select required class="required">
+                    <option value="">בחר יחידות</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5">5</option>
+                </select>
+                <button class="remove-btn" onclick="removeSubject(this)">-</button>
+            `;
+            container.appendChild(div);
+        }
+
+        function removeSubject(button) {
+            button.parentElement.remove();
+        }
+
+        async function submitForm() {
+            saveStepData(3);
+            
+            const { psychometric, subject } = formData;
+            
+            if (!psychometric.general || !psychometric.quantitative || 
+                !psychometric.verbal || !psychometric.english || !subject) {
+                alert('יש להשלים את כל שדות החובה המסומנים ב-*');
+                return;
+            }
+
+            if (psychometric.general < 200 || psychometric.general > 800 || 
+                psychometric.quantitative < 50 || psychometric.quantitative > 150 || 
+                psychometric.verbal < 50 || psychometric.verbal > 150 || 
+                psychometric.english < 50 || psychometric.english > 150) {
+                alert('ציוני פסיכומטרי חייבים להיות: כללי (200-800), תחומים (50-150)');
+                return;
+            }
+
+            // Validate total high school units
+            const totalUnits = Object.values(formData.highschool_scores)
+                .reduce((sum, [_, units]) => sum + parseInt(units), 0);
+            if (totalUnits < 21) {
+                alert('סך יחידות הלימוד חייב להיות לפחות 21');
+                return;
+            }
+
+            const transformedData = {
+                psycho_score: parseInt(psychometric.general),
+                psycho_math: parseInt(psychometric.quantitative),
+                psycho_hebrew: parseInt(psychometric.verbal),
+                psycho_english: parseInt(psychometric.english),
+                highschool_scores: formData.highschool_scores,
+                subject: subject
+            };
+            
+            // Store the form data and redirect to loading page
+            localStorage.setItem('submissionData', JSON.stringify(transformedData));
+            window.location.href = 'loading.html';
+        }
+
+        // Add input event listeners to update progress bar when fields are filled
+        document.querySelectorAll('input, select').forEach(element => {
+            element.addEventListener('input', () => updateProgressBar(currentStep));
+        });
+    </script>
+</body>
+</html>

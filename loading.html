@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+  <meta charset="UTF-8">
+  <title>בודקים את הנתונים שלך</title>
+  <link rel="stylesheet" href="loading.css">
+</head>
+<body>
+  <div class="spinner"></div>
+  <div class="text">בודקים את הנתונים שלך...</div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', async function() {
+      try {
+        // Retrieve stored form data
+        const transformedData = JSON.parse(localStorage.getItem('submissionData'));
+        if (!transformedData) {
+          throw new Error('No submission data found');
+        }
+
+        const servers = [
+          'http://192.168.0.18:5000/TelAviv',
+          'http://192.168.0.18:5001/TelAviv',
+          'http://192.168.0.18:5002/TelAviv',
+          'http://192.168.0.18:5003/TelAviv'
+        ];
+
+        const promises = servers.map(async server => {
+          try {
+            const response = await fetch(server, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(transformedData)
+            });
+
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const result = await response.json();
+            return {
+              server: server,
+              status: 'success',
+              data: result
+            };
+          } catch (error) {
+            return {
+              server: server,
+              status: 'error',
+              error: error.message
+            };
+          }
+        });
+
+        const results = await Promise.all(promises);
+        
+        // Clear submission data and store results
+        localStorage.removeItem('submissionData');
+        localStorage.setItem('resultData', JSON.stringify(results));
+        
+        // Redirect to results page
+        window.location.href = 'results.html';
+      } catch (error) {
+        // Store the error and redirect to results page
+        localStorage.setItem('submissionError', error.message);
+        window.location.href = 'results.html';
+      }
+    });
+  </script>
+</body>
+</html>
