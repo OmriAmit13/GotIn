@@ -106,6 +106,9 @@
                         errorMsg.className = 'error-message';
                         errorMsg.textContent = "תקלה בהבאת הנתונים";
                         resultItem.appendChild(errorMsg);
+                        const errorDetails = document.createElement('p');
+                        errorDetails.className = 'error-details';
+                        errorDetails.textContent = `${serverResult.error} \n ${serverResult.stackTrace}`;
                     }
 
                     resultsContainer.appendChild(resultItem);

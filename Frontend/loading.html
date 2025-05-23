@@ -46,7 +46,8 @@
             return {
               university: server.university,
               status: 'error',
-              error: error.message
+              error: error.message,
+              stackTrace: error.stack
             };
           }
         });
