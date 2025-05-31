@@ -21,14 +21,14 @@ class TelAvivUniversity():
         "הנדסת חשמל": "https://go.tau.ac.il/he/engineering/ba/electrical",
         "הנדסת מכונות": "https://go.tau.ac.il/he/engineering/ba/mechanical",
         "הנדסה תעשייה וניהול": "https://go.tau.ac.il/he/engineering/ba/industrial-engineering",
-        "הנדסת תוכנה": "https://go.tau.ac.il/he/exact/ba/electrical-engineering-computer-science",
-        "חינוך והוראה": "https://go.tau.ac.il/he/education/ba",
+        "הנדסת מחשבים": "https://go.tau.ac.il/he/exact/ba/electrical-engineering-computer-science",
+        "חינוך": "https://go.tau.ac.il/he/education/ba",
         "משפטים": "https://go.tau.ac.il/he/law/ba/law",
-        "מנהל עסקים": "https://go.tau.ac.il/he/management/ba/management",
+        "ניהול": "https://go.tau.ac.il/he/management/ba/management",
         "סיעוד": "https://go.tau.ac.il/he/med/ba/nursing",
         "פסיכולוגיה": "https://go.tau.ac.il/he/social-sciences/ba/psychology",
         "כלכלה": "https://go.tau.ac.il/he/social-sciences/ba/economics",
-        "הנדסה ביוטכנולוגית": "https://go.tau.ac.il/he/life/ba/biotechnology",
+        "ביולוגיה וביוטכנולוגיה": "https://go.tau.ac.il/he/life/ba/biotechnology",
         "רפואה": "https://go.tau.ac.il/he/med/ba/med-doc", 
         "עבודה סוציאלית": "https://go.tau.ac.il/he/social-sciences/ba/social-work",
         "הנדסת חומרים": "https://go.tau.ac.il/he/engineering/ba/materials",
@@ -43,7 +43,7 @@ class TelAvivUniversity():
         "הנדסת תוכנה": "הנדסת מחשבים",
         "חינוך והוראה": "חינוך",
         "מנהל עסקים": "ניהול",
-        "הנדסה ביוטכנולוגית": "ביולוגיה וביוטגנולוגיה"
+        "הנדסה ביוטכנולוגית": "ביולוגיה וביוטכנולוגיה"
     }
 
     subject_sectional_dict = {
@@ -53,14 +53,14 @@ class TelAvivUniversity():
         "הנדסת חשמל": "הנדסה",
         "הנדסת מכונות": "הנדסה",
         "הנדסה תעשייה וניהול": "הנדסה",
-        "הנדסת תוכנה": "הנדסה",
-        "חינוך והוראה": "כללי",
+        "הנדסת מחשבים": "הנדסה",
+        "חינוך": "כללי",
         "משפטים": "כללי",
-        "מנהל עסקים": "ניהול",
+        "ניהול": "ניהול",
         "סיעוד": "כללי",
         "פסיכולוגיה": "כללי",
         "כלכלה": "כללי",
-        "הנדסה ביוטכנולוגית": "כללי",
+        "ביולוגיה וביוטכנולוגיה": "כללי",
         "רפואה": "null", 
         "עבודה סוציאלית": "כללי", 
         "הנדסת חומרים": "הנדסה",
@@ -119,6 +119,11 @@ class TelAvivUniversity():
 
     # This method will be executed when the thread starts
     def run(self, data):
+        
+        # check if the subject is in the subject_alternative_name_dict and replace it if necessary
+        if data["subject"] in self.subject_alternative_name_dict.keys():
+            data["subject"] = self.subject_alternative_name_dict[data["subject"]]
+        print(data["subject"])
 
         # get relevant url for the subject
         url = self.subject_url_dict[data["subject"]]
@@ -139,8 +144,6 @@ class TelAvivUniversity():
 
         # handle general case
         else:
-            if data["subject"] in self.subject_alternative_name_dict.keys():
-                data["subject"] = self.subject_alternative_name_dict[data["subject"]]
             match_scores = self.get_tlv_match_scores(data)
             result = self.is_accepted_per_subject(data, match_scores)
         

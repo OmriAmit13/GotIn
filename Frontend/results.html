@@ -80,13 +80,14 @@
                                     // Add color class based on status
                                     if (value === 'קבלה') {
                                         resultItem.classList.add('kabala');
+                                        resultItem.appendChild(p);
                                     } else if (value === 'דחייה') {
                                         resultItem.classList.add('dkhiya');
+                                        resultItem.appendChild(p);
                                     } else if (value === 'רשימת המתנה') {
                                         resultItem.classList.add('waiting');
+                                        resultItem.appendChild(p);
                                     }
-                                    
-                                    resultItem.appendChild(p);
                                 }
                                 // Handle message
                                 else if (key === 'message' && value && value.trim() !== '') {
