@@ -1,4 +1,3 @@
-import time
 import json
 import os
 import traceback
@@ -9,7 +8,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import WebDriverException, InvalidSessionIdException, NoSuchWindowException
+from selenium.common.exceptions import WebDriverException, InvalidSessionIdException, NoSuchWindowException, TimeoutException, StaleElementReferenceException
 from webdriver_manager.chrome import ChromeDriverManager
 
 class BenGurionUniversity:
@@ -87,6 +86,23 @@ class BenGurionUniversity:
                 "message": message     # Descriptive message about admission result
             }
         """
+        # Handle alternate psychometric score formats
+        if "psycho_score" in request_data:
+            # Convert from frontend format to our internal format
+            request_data["psychometric"] = {
+                "total": request_data.get("psycho_score", 0),
+                "math": request_data.get("psycho_math", 0),
+                "verbal": request_data.get("psycho_hebrew", 0),
+                "english": request_data.get("psycho_english", 0)
+            }
+        elif not "psychometric" in request_data:
+            # Initialize empty psychometric data if not present
+            request_data["psychometric"] = {
+                "total": 0,
+                "math": 0, 
+                "verbal": 0,
+                "english": 0
+            }
         results = {}
         output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "admission_results.json")
         
@@ -99,7 +115,7 @@ class BenGurionUniversity:
                     # print("✅ Found cached results to use as fallback if needed")
             except:
                 cached_results = {}
-                # print("⚠ Could not read cached results file")
+                # print("⚠️ Could not read cached results file")
         else:
             cached_results = {}
             
@@ -127,6 +143,9 @@ class BenGurionUniversity:
             
             # Get the data from the request
             highschool_scores = request_data.get("highschool_scores", {})
+
+            self.adapt_highschool_scores(highschool_scores)
+
             psychometric = request_data.get("psychometric", {})
             
             # Handle degrees_to_check more robustly - could be array, string, or come from subject field
@@ -161,7 +180,7 @@ class BenGurionUniversity:
                 driver.execute_script("arguments[0].click();", popup_close_btn)
                 # print("✅ Popup closed.")
             except Exception as e:
-                # print(f"ℹ No popup detected: {e}")
+                # print(f"ℹ️ No popup detected: {e}")
                 pass
 
             # Accept cookies if needed
@@ -173,7 +192,7 @@ class BenGurionUniversity:
                 cookie_btn.click()
                 # print("✅ Cookie accepted.")
             except Exception as e:
-                # print(f"ℹ No cookie prompt found: {e}")
+                # print(f"ℹ️ No cookie prompt found: {e}")
                 pass
 
             # Switch to iframe containing the calculator
@@ -226,7 +245,7 @@ class BenGurionUniversity:
                 results = self._check_acceptance_list(driver, wait, degrees_to_check)
             except Exception as e:
                 print(f"❌ Could not retrieve acceptance list: {e}")
-                print("⚠ Falling back to individual degree checking...")
+                print("⚠️ Falling back to individual degree checking...")
                 results = self._check_degree_acceptance(driver, wait, degrees_to_check)
             
             # Save results to file
@@ -242,12 +261,12 @@ class BenGurionUniversity:
             # Use cached results as fallback if we couldn't get any results from scraping
             if not results:
                 if cached_results and request_data.get("degrees_to_check"):
-                    print("⚠ Using cached results as fallback")
+                    print("⚠️ Using cached results as fallback")
                     requested_degrees = request_data.get("degrees_to_check", [])
                     results = {degree: cached_results.get(degree, "לא ידוע") for degree in requested_degrees}
                 else:
                     # Generate mock results based on input data
-                    print("⚠ Generating mock results as fallback")
+                    print("⚠️ Generating mock results as fallback")
                     print("📋 Note: You can customize these mock results by editing admission_results.json")
                     psychometric = request_data.get("psychometric", {})
                     total_score = psychometric.get("total", 0)
@@ -283,7 +302,7 @@ class BenGurionUniversity:
                             json.dump(results, f, ensure_ascii=False, indent=2)
                         print(f"✅ Saved mock results to {output_path}")
                     except Exception as save_error:
-                        print(f"⚠ Failed to save mock results: {save_error}")
+                        print(f"⚠️ Failed to save mock results: {save_error}")
         finally:
             # Always close the browser
             self.close_browser()
@@ -371,7 +390,14 @@ class BenGurionUniversity:
                 
                 # Scroll up to make sure the button is visible
                 driver.execute_script("window.scrollTo(0, 0);")
-                time.sleep(1)
+                
+                # Wait for the page to scroll to top
+                try:
+                    WebDriverWait(driver, 2).until(
+                        lambda d: d.execute_script("return window.pageYOffset") == 0
+                    )
+                except TimeoutException:
+                    pass  # Continue even if the condition times out
                 
                 # Try different methods to find the add button
                 try:
@@ -395,10 +421,13 @@ class BenGurionUniversity:
                             raise Exception("Could not find add button")
                 
                 # Click the button
-                driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", add_button)
-                time.sleep(0.5)
-                driver.execute_script("arguments[0].click();", add_button)
-                time.sleep(1.5)
+                self._safe_click(driver, add_button, f"add subject button {i+2}")
+                
+                # Wait for new field to appear
+                WebDriverWait(driver, 3).until(
+                    lambda d: len(d.find_elements(By.CSS_SELECTOR, ".user-field")) > i+1
+                )
+                
                 # print("✅ Added new subject field")
                 
             except Exception as e:
@@ -409,61 +438,76 @@ class BenGurionUniversity:
         # print("\n📝 Entering subject information...")
         for idx, (subject, values) in enumerate(ordered_subjects):
             # Extract grade and level
-            if isinstance(values, list) and len(values) >= 2:
-                grade, level = values
+            grade, level = values
+
+            # Find and fill subject name field
+            subject_input_id = f"react-select-{2 + idx}-input"
+            input_element = self._find_element_with_retry(driver, wait, 
+                                                            [(By.ID, subject_input_id),
+                                                            (By.CSS_SELECTOR, ".react-select__input input")])
+            
+            if input_element:
+                driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", input_element)
+                
+                # Wait for element to be in view
+                self._wait_for_element_stable(driver, input_element)
+                
+                input_element.clear()
+                input_element.send_keys(Keys.CONTROL + "a")
+                input_element.send_keys(Keys.DELETE)
+                input_element.send_keys(subject)
+                
+                # Wait for dropdown to appear with options
+                WebDriverWait(driver, 2).until(
+                    lambda d: len(d.find_elements(By.CSS_SELECTOR, ".react-select__menu")) > 0
+                )
+                
+                input_element.send_keys(Keys.ENTER)
+                
+                # # Wait for selection to be applied
+                # WebDriverWait(driver, 3).until(
+                #     lambda d: d.execute_script(
+                #         "return arguments[0].parentElement.parentElement.className.includes('has-value')",
+                #         input_element
+                #     )
+                # )
+                
+                # print(f"📝 Entered subject name: {subject}")
+            
+            # Find and fill level/units field
+            level_input = self._find_element_with_retry(driver, wait,
+                                                        [(By.ID, f"item_{idx}_level"),
+                                                        (By.CSS_SELECTOR, f".user-field:nth-child({idx+1}) input.simple-input:first-child")])
+            
+            if level_input:
+                driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", level_input)
+                self._wait_for_element_stable(driver, level_input)
+                level_input.clear()
+                level_input.send_keys(str(level))
+                # print(f"🔢 Entered level for {subject}: {level}")
             else:
-                # print(f"⚠ Missing data for {subject}. Skipping...")
-                continue
+                Exception(f"Could not find level input for subject {subject}")
             
-            # print(f"\n⭐ Processing subject {idx+1}/{num_subjects}: {subject}")
+            # Find and fill grade field
+            grade_input = self._find_element_with_retry(driver, wait,
+                                                        [(By.ID, f"item_{idx}_grade"),
+                                                        (By.CSS_SELECTOR, f".user-field:nth-child({idx+1}) input.simple-input:nth-child(2)")])
             
-            try:
-                # Find and fill subject name field
-                subject_input_id = f"react-select-{2 + idx}-input"
-                input_element = self._find_element_with_retry(driver, wait, 
-                                                             [(By.ID, subject_input_id),
-                                                              (By.CSS_SELECTOR, ".react-select__input input")])
-                
-                if input_element:
-                    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", input_element)
-                    time.sleep(1)
-                    input_element.clear()
-                    input_element.send_keys(Keys.CONTROL + "a")
-                    input_element.send_keys(Keys.DELETE)
-                    input_element.send_keys(subject)
-                    time.sleep(1)
-                    input_element.send_keys(Keys.ENTER)
-                    time.sleep(1.5)
-                    # print(f"📝 Entered subject name: {subject}")
-                
-                # Find and fill level/units field
-                level_input = self._find_element_with_retry(driver, wait,
-                                                          [(By.ID, f"item_{idx}_level"),
-                                                           (By.CSS_SELECTOR, f".user-field:nth-child({idx+1}) input.simple-input:first-child")])
-                
-                if level_input:
-                    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", level_input)
-                    level_input.clear()
-                    level_input.send_keys(str(level))
-                    # print(f"🔢 Entered level for {subject}: {level}")
-                
-                # Find and fill grade field
-                grade_input = self._find_element_with_retry(driver, wait,
-                                                          [(By.ID, f"item_{idx}_grade"),
-                                                           (By.CSS_SELECTOR, f".user-field:nth-child({idx+1}) input.simple-input:nth-child(2)")])
-                
-                if grade_input:
-                    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", grade_input)
-                    grade_input.clear()
-                    grade_input.send_keys(str(grade))
-                    # print(f"🎯 Entered grade for {subject}: {grade}")
-                
-                # print(f"✅ Subject {subject} entered successfully")
-                time.sleep(1)
-                
-            except Exception as e:
-                # print(f"❌ Failed while entering subject {subject}: {e}")
-                pass
+            if grade_input:
+                driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", grade_input)
+                self._wait_for_element_stable(driver, grade_input)
+                grade_input.clear()
+                grade_input.send_keys(str(grade))
+                # print(f"🎯 Entered grade for {subject}: {grade}")
+            else:
+                Exception(f"Could not find grade input for subject {subject}")
+            
+            # print(f"✅ Subject {subject} entered successfully")
+            
+            # Wait for page to register the input
+            driver.implicitly_wait(1)
+            
+
         
         # print("\n✅ Finished entering all subjects")
 
@@ -474,14 +518,18 @@ class BenGurionUniversity:
             calc_button = wait.until(
                 EC.element_to_be_clickable((By.CSS_SELECTOR, "button.page-link"))
             )
-            driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", calc_button)
-            driver.execute_script("arguments[0].click();", calc_button)
-            # print("✅ Clicked on calculate average button.")
+            self._safe_click(driver, calc_button, "calculate average button")
             
-            # Get the calculated high school average
+            # Wait for calculation to complete and result to appear
             avg_element = wait.until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, ".calculated-result-holder span"))
             )
+            
+            # Wait for the result to be populated
+            WebDriverWait(driver, 5).until(
+                lambda d: avg_element.get_attribute("innerText").strip() != ""
+            )
+            
             average_score = avg_element.get_attribute("innerText").strip()
             # print(f"🎯 Calculated high school average: {average_score}")
             return average_score
@@ -497,26 +545,34 @@ class BenGurionUniversity:
             back_link = wait.until(
                 EC.element_to_be_clickable((By.CSS_SELECTOR, "a.page-link.short-link.prev-link"))
             )
-            driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", back_link)
-            driver.execute_script("arguments[0].click();", back_link)
+            self._safe_click(driver, back_link, "back to main page button")
             print("🔙 Returned to main page.")
             
             # Wait for iframe to reload
-            time.sleep(1)
             driver.switch_to.default_content()
+            
+            # Wait for the iframe to be available
             iframe = wait.until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, "iframe[src*='apps4cloud.bgu.ac.il/calcprod']"))
             )
+            
             driver.switch_to.frame(iframe)
             print("🔁 Re-entered iframe.")
             
+            # Wait for page to load inside iframe
+            WebDriverWait(driver, 5).until(
+                EC.presence_of_element_located((By.CLASS_NAME, "simple-input"))
+            )
+            
             # Enter the high school average
-            time.sleep(0.5)
             avg_input = wait.until(
                 EC.presence_of_element_located((By.CLASS_NAME, "simple-input"))
             )
             driver.execute_script("arguments[0].scrollIntoView({block: 'start'});", avg_input)
-            time.sleep(0.5)
+            
+            # Wait for element to be in view and stable
+            self._wait_for_element_stable(driver, avg_input)
+            
             avg_input.clear()
             avg_input.send_keys(average_score)
             print(f"✅ Entered high school average: {average_score}")
@@ -591,11 +647,31 @@ class BenGurionUniversity:
             if add_subject_btn:
                 # Scroll to ensure visibility and click
                 driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-                time.sleep(2)
+                
+                # Wait for page to scroll to bottom
+                try:
+                    WebDriverWait(driver, 2).until(
+                        lambda d: d.execute_script(
+                            "return (window.innerHeight + window.pageYOffset) >= document.body.scrollHeight"
+                        )
+                    )
+                except TimeoutException:
+                    pass  # Continue even if the condition times out
+                
+                # Scroll the button into view
                 driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", add_subject_btn)
-                time.sleep(1)
-                driver.execute_script("arguments[0].click();", add_subject_btn)
-                time.sleep(2)
+                
+                # Wait for element to be stable in view
+                self._wait_for_element_stable(driver, add_subject_btn)
+                
+                # Click the add button
+                self._safe_click(driver, add_subject_btn, f"add subject button for {subject}")
+                
+                # Wait for UI to update - new field to appear
+                WebDriverWait(driver, 3).until(
+                    lambda d: len(d.find_elements(By.CSS_SELECTOR, ".user-field")) > subject_idx
+                )
+                
                 print(f"✅ Added field for subject #{idx+1}: {subject}")
             else:
                 print("❌ Could not find add subject button")
@@ -613,16 +689,35 @@ class BenGurionUniversity:
                     # Check if it's empty or the last one
                     if not dropdown.get_attribute("value"):
                         driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", dropdown)
-                        time.sleep(1)
+                        
+                        # Wait for element to be in view and stable
+                        self._wait_for_element_stable(driver, dropdown)
+                        
                         dropdown.clear()
                         dropdown.send_keys(subject)
-                        time.sleep(1)
+                        
+                        # Wait for dropdown to appear
+                        try:
+                            WebDriverWait(driver, 2).until(
+                                lambda d: len(d.find_elements(By.CSS_SELECTOR, ".react-select__menu")) > 0
+                            )
+                        except TimeoutException:
+                            pass
+                            
                         dropdown.send_keys(Keys.ENTER)
+                        
+                        # Wait for selection to be applied
+                        WebDriverWait(driver, 2).until(
+                            lambda d: d.execute_script(
+                                "return arguments[0].parentElement.parentElement.className.includes('has-value')",
+                                dropdown
+                            )
+                        )
+                        
                         print(f"✅ Selected subject: {subject}")
                         dropdown_found = True
-                        time.sleep(2)
                         break
-                except:
+                except Exception:
                     continue
                     
             if not dropdown_found:
@@ -633,10 +728,14 @@ class BenGurionUniversity:
                         if not dropdown.get_attribute("value"):
                             dropdown.clear()
                             dropdown.send_keys(subject)
-                            time.sleep(1)
+                            
+                            # Wait for dropdown options
+                            WebDriverWait(driver, 2).until(
+                                lambda d: len(d.find_elements(By.CSS_SELECTOR, ".react-select__menu")) > 0
+                            )
+                            
                             dropdown.send_keys(Keys.ENTER)
                             print(f"✅ Selected subject (backup method): {subject}")
-                            time.sleep(1)
                             break
                 except Exception as e:
                     print(f"❌ Failed to select subject: {e}")
@@ -662,7 +761,9 @@ class BenGurionUniversity:
                     print(f"✅ Entered grade: {grade}")
             
             print(f"✅ Completed processing subject: {subject}")
-            time.sleep(2)
+            
+            # Wait for page to register changes
+            driver.implicitly_wait(2)
             
         except Exception as e:
             print(f"❌ Error processing subject {subject}: {e}")
@@ -672,13 +773,34 @@ class BenGurionUniversity:
         try:
             input_field = driver.find_element(By.ID, input_id)
             driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", input_field)
-            time.sleep(1)
+            
+            # Wait for element to be in stable position
+            self._wait_for_element_stable(driver, input_field)
+            
             input_field.clear()
             input_field.send_keys(value)
             print(f"✅ {field_name}: {value}")
-            time.sleep(0.5)
+            
+            # Wait for input to register
+            driver.implicitly_wait(0.5)
+            
         except Exception as e:
             print(f"❌ {field_name} error: {e}")
+
+    def _wait_for_element_stable(self, driver, element, timeout=2):
+        """Wait for an element to be in a stable position."""
+        try:
+            WebDriverWait(driver, timeout).until(
+                lambda d: d.execute_script(
+                    "var rect = arguments[0].getBoundingClientRect(); " +
+                    "return rect.top >= 0 && rect.left >= 0 && " +
+                    "rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) && " +
+                    "rect.right <= (window.innerWidth || document.documentElement.clientWidth)",
+                    element
+                )
+            )
+        except TimeoutException:
+            pass  # Continue even if timeout occurs
 
     def _navigate_to_psychometric_page(self, driver, wait):
         """Navigate to the psychometric scores page."""
@@ -694,11 +816,14 @@ class BenGurionUniversity:
                 ])
                 
                 if next_button:
-                    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", next_button)
-                    time.sleep(1)
-                    driver.execute_script("arguments[0].click();", next_button)
+                    self._safe_click(driver, next_button, f"'Next' button ({i+1}/2)")
+                    
+                    # Wait for page transition
+                    WebDriverWait(driver, 3).until(
+                        lambda d: d.execute_script("return document.readyState") == "complete"
+                    )
+                    
                     print(f"✅ Clicked 'Next' button ({i+1}/2)")
-                    time.sleep(2)
                 else:
                     print(f"❌ Could not find 'Next' button ({i+1}/2)")
                     
@@ -706,23 +831,28 @@ class BenGurionUniversity:
                 print(f"❌ Failed to click 'Next' button: {e}")
         
         print("\n📝 Now on psychometric score page")
-        time.sleep(2)
+        
+        # Wait for the psychometric page to load completely
+        WebDriverWait(driver, 3).until(
+            lambda d: len(d.find_elements(By.CSS_SELECTOR, ".user-field")) > 0
+        )
 
     def _fill_psychometric_scores(self, driver, wait, psychometric):
         """Fill psychometric exam scores."""
         print("\n📊 Entering psychometric scores...")
         
-        total_score = psychometric.get("total", 0)
-        english_score = psychometric.get("english", 0)
-        math_score = psychometric.get("math", 0)
-        verbal_score = psychometric.get("verbal", 0)
+        # Get scores with multiple possible key formats
+        total_score = psychometric.get("total", psychometric.get("general", psychometric.get("psycho_score", 0)))
+        english_score = psychometric.get("english", psychometric.get("psycho_english", 0))
+        math_score = psychometric.get("math", psychometric.get("quantitative", psychometric.get("psycho_math", 0)))
+        verbal_score = psychometric.get("verbal", psychometric.get("hebrew", psychometric.get("psycho_hebrew", 0)))
         
         # Find psychometric input containers
         psychometry_fields = driver.find_elements(By.CSS_SELECTOR, 
                                                "div.user-field.content-description.psychometry")
         
         if not psychometry_fields:
-            print("⚠ Couldn't find psychometric input fields using primary selector")
+            print("⚠️ Couldn't find psychometric input fields using primary selector")
             psychometry_fields = driver.find_elements(By.CSS_SELECTOR, "div.user-field")
         
         print(f"Found {len(psychometry_fields)} psychometric input fields")
@@ -768,7 +898,10 @@ class BenGurionUniversity:
                 
                 if score_value is not None:
                     driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", input_element)
-                    time.sleep(0.5)
+                    
+                    # Wait for element to be in view and stable
+                    self._wait_for_element_stable(driver, input_element)
+                    
                     input_element.clear()
                     input_element.send_keys(str(score_value))
                     print(f"✅ Entered {field_name} score: {score_value}")
@@ -779,7 +912,7 @@ class BenGurionUniversity:
         # Check if we missed any fields and use alternative methods
         missed_fields = [key for key, value in entered_scores.items() if not value]
         if missed_fields:
-            print(f"⚠ Could not find fields for: {', '.join(missed_fields)}")
+            print(f"⚠️ Could not find fields for: {', '.join(missed_fields)}")
             print("Trying alternative approach...")
             
             for field_name in missed_fields:
@@ -808,7 +941,10 @@ class BenGurionUniversity:
                     
                     if input_element:
                         driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", input_element)
-                        time.sleep(0.5)
+                        
+                        # Wait for element to be stable
+                        self._wait_for_element_stable(driver, input_element)
+                        
                         input_element.clear()
                         input_element.send_keys(str(field_map[field_name]))
                         print(f"✅ Entered {field_name} score using alternative method: {field_map[field_name]}")
@@ -833,7 +969,9 @@ class BenGurionUniversity:
         for target in next_button_targets:
             print(f"🔄 Looking for {target['name']} 'Next' button ({target['href']})...")
             success = False
-            time.sleep(3)  # Extended wait between button clicks
+            
+            # Give a short delay between navigation attempts
+            driver.implicitly_wait(3)
             
             # Try all possible ways to find and click the next button
             strategies = [
@@ -872,33 +1010,40 @@ class BenGurionUniversity:
                     continue
             
             if not success:
-                print(f"⚠ Failed all attempts to navigate past {target['name']} step - will try to continue anyway")
+                print(f"⚠️ Failed all attempts to navigate past {target['name']} step - will try to continue anyway")
             
-            # Regardless of button click success, wait to allow page transitions
-            time.sleep(3)
+            # Wait for any page transitions, regardless of button click success
+            try:
+                WebDriverWait(driver, 3).until(
+                    lambda d: d.execute_script("return document.readyState") == "complete"
+                )
+            except TimeoutException:
+                pass  # Continue even if timeout
         
         print("✅ Navigation process completed - attempting to continue")
-    
+
     def _try_click_button(self, driver, wait, by_method, selector, description):
         """Helper method to find and click buttons with better error handling."""
         try:
-            # First try to find the element with a wait
-            button = wait.until(EC.presence_of_element_located((by_method, selector)))
+            # Try to find the element as clickable first
+            button = self._wait_for_clickable_element(driver, wait, by_method, selector)
             
-            # Scroll to ensure visibility
-            driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", button)
-            time.sleep(1)
-            
-            # Try direct click first
-            try:
-                button.click()
-            except Exception:
-                # Fall back to JavaScript click if direct click fails
-                driver.execute_script("arguments[0].click();", button)
-            
-            print(f"✅ Clicked {description}")
-            time.sleep(2)
-            return True
+            # If not found as clickable, try just finding it
+            if not button:
+                button = wait.until(EC.presence_of_element_located((by_method, selector)))
+                
+            # Use safe click helper method
+            if self._safe_click(driver, button, description):
+                # Wait for any page transitions
+                try:
+                    # Wait for page to stabilize (check for changes in the URL or page content)
+                    WebDriverWait(driver, 3).until(
+                        lambda d: d.execute_script("return document.readyState") == "complete"
+                    )
+                except TimeoutException:
+                    pass  # Continue even if timeout
+                return True
+            return False
         except Exception as e:
             print(f"❌ Could not click {description}: {e}")
             return False
@@ -937,11 +1082,7 @@ class BenGurionUniversity:
         for element in possible_elements:
             try:
                 if element.is_displayed():
-                    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", element)
-                    time.sleep(1)
-                    driver.execute_script("arguments[0].click();", element)
-                    print(f"✅ Clicked potential navigation element: {element.get_attribute('outerHTML')[:100]}...")
-                    time.sleep(2)
+                    self._safe_click(driver, element, "potential navigation element")
                     return True
             except Exception:
                 continue
@@ -965,16 +1106,20 @@ class BenGurionUniversity:
             ])
             
             if acceptance_button:
-                driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", acceptance_button)
-                time.sleep(1)
-                driver.execute_script("arguments[0].click();", acceptance_button)
+                self._safe_click(driver, acceptance_button, "acceptance list button")
                 print("✅ Clicked on acceptance list button")
-                time.sleep(3)  # Wait for page transition
+                
+                # Wait for page transition
+                WebDriverWait(driver, 3).until(
+                    lambda d: d.execute_script("return document.readyState") == "complete"
+                )
             else:
                 return {"error": "Could not navigate to acceptance list page"}
             
             # Wait for the list to load
-            time.sleep(3)
+            WebDriverWait(driver, 3).until(
+                lambda d: len(d.find_elements(By.CSS_SELECTOR, "div.content, div.results-container, div")) > 0
+            )
             
             # Degree mapping for BGU website
             degree_mapping = self._get_degree_mapping()
@@ -1006,7 +1151,7 @@ class BenGurionUniversity:
                             if item_text:
                                 accepted_degrees.append(item_text)
                 except Exception as e:
-                    print(f"⚠ Error processing container: {e}")
+                    print(f"⚠️ Error processing container: {e}")
             
             # If no specific items found, split text by lines
             if not accepted_degrees and all_text:
@@ -1064,11 +1209,13 @@ class BenGurionUniversity:
         ])
         
         if calc_chances_button:
-            driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", calc_chances_button)
-            time.sleep(1)
-            driver.execute_script("arguments[0].click();", calc_chances_button)
+            self._safe_click(driver, calc_chances_button, "'Calculate admission chances' button")
             print("✅ Clicked on 'Calculate admission chances' button")
-            time.sleep(2)
+            
+            # Wait for page transition
+            WebDriverWait(driver, 3).until(
+                lambda d: d.execute_script("return document.readyState") == "complete"
+            )
         else:
             print("❌ Could not navigate to admission chances page")
             return {"error": "Navigation to admission calculator failed"}
@@ -1078,10 +1225,13 @@ class BenGurionUniversity:
             calc_button = wait.until(
                 EC.element_to_be_clickable((By.CSS_SELECTOR, ".submit-btn"))
             )
-            driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", calc_button)
-            driver.execute_script("arguments[0].click();", calc_button)
+            self._safe_click(driver, calc_button, "calculate admission button")
             print("✅ Clicked on calculate admission chances button.")
-            time.sleep(2)
+            
+            # Wait for calculation to complete
+            WebDriverWait(driver, 3).until(
+                lambda d: d.execute_script("return document.readyState") == "complete"
+            )
         except Exception as e:
             print(f"❌ Failed to click calculate admission button: {e}")
         
@@ -1111,15 +1261,31 @@ class BenGurionUniversity:
                     
                     # Enter the degree name
                     driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", degree_search)
-                    time.sleep(0.5)
+                    
+                    # Wait for element to be stable
+                    self._wait_for_element_stable(driver, degree_search)
+                    
                     degree_search.clear()
                     degree_search.send_keys(Keys.CONTROL + "a")
                     degree_search.send_keys(Keys.DELETE)
                     degree_search.send_keys(bgu_degree_name)
-                    time.sleep(1)
+                    
+                    # Wait for dropdown to appear
+                    try:
+                        WebDriverWait(driver, 2).until(
+                            lambda d: len(d.find_elements(By.CSS_SELECTOR, ".react-select__menu")) > 0
+                        )
+                    except TimeoutException:
+                        pass
+                    
                     degree_search.send_keys(Keys.RETURN)
                     print(f"📝 Entered degree name: '{bgu_degree_name}' (for {degree})")
-                    time.sleep(2)
+                    
+                    # Wait for results to appear
+                    WebDriverWait(driver, 3).until(
+                        lambda d: len(d.find_elements(By.CSS_SELECTOR, ".result-content, .degree-result, .acceptance-result")) > 0
+                        or len(d.find_elements(By.CSS_SELECTOR, "div.content, div.result")) > 0
+                    )
                     
                     # Get the result
                     result_element = self._find_element_with_retry(driver, wait, [
@@ -1140,8 +1306,13 @@ class BenGurionUniversity:
                         ])
                         
                         if clear_button:
-                            driver.execute_script("arguments[0].click();", clear_button)
-                            time.sleep(1)
+                            self._safe_click(driver, clear_button, "clear search button")
+                            
+                            # Wait for search to clear
+                            WebDriverWait(driver, 2).until(
+                                lambda d: len(d.find_elements(By.CSS_SELECTOR, ".result-content")) == 0
+                                or not degree_search.get_attribute("value")
+                            )
                         else:
                             # Manual clearing
                             degree_search.clear()
@@ -1151,10 +1322,12 @@ class BenGurionUniversity:
                     else:
                         print(f"❌ Could not find results for {degree}")
                         # Will retry if not last attempt
+                        driver.implicitly_wait(1)  # Short wait before retry
                         
                 except Exception as e:
                     print(f"❌ Problem searching for {degree} (attempt {retry+1}/{max_retries}): {e}")
                     # Continue to next retry if available
+                    driver.implicitly_wait(1)  # Short wait before retry
             
             # If we exhausted retries without success
             if degree not in results:
@@ -1188,7 +1361,7 @@ class BenGurionUniversity:
             "מתמטיקה": "מתמטיקה",
             "פיזיותרפיה": "פיזיותרפיה",
             "ריפוי בעיסוק": "ריפוי בעיסוק",
-            "הנדסת מחשבים": "הנדסת מחשבים"
+            "הנדסת מחשבים": "הנדסת מחשבים",
         }
     
     def _clean_degree_name(self, degree_name):
@@ -1227,7 +1400,83 @@ class BenGurionUniversity:
                 except Exception as e:
                     if attempt == max_attempts - 1:
                         print(f"Could not find element with {by}: {selector} after {max_attempts} attempts")
-                    time.sleep(0.5)
+                    # Use a short timeout instead of sleep
+                    driver.implicitly_wait(0.5)
         
         # If we get here, we've tried all selectors without success
         return None
+        
+    def _wait_for_clickable_element(self, driver, wait, by_method, selector, timeout=10):
+        """
+        Wait for an element to be clickable with proper error handling.
+        
+        Args:
+            driver: WebDriver instance
+            wait: WebDriverWait instance
+            by_method: By method to use (e.g., By.ID, By.CSS_SELECTOR)
+            selector: Selector string
+            timeout: Timeout in seconds
+            
+        Returns:
+            The found element if clickable, or None if not found/clickable
+        """
+        try:
+            element = WebDriverWait(driver, timeout).until(
+                EC.element_to_be_clickable((by_method, selector))
+            )
+            return element
+        except (TimeoutException, StaleElementReferenceException) as e:
+            print(f"Element not clickable: {selector}, Error: {e}")
+            return None
+            
+    def _safe_click(self, driver, element, description="element"):
+        """
+        Safely click an element with JavaScript if direct click fails.
+        
+        Args:
+            driver: WebDriver instance
+            element: Element to click
+            description: Description of the element for logging
+            
+        Returns:
+            True if click was successful, False otherwise
+        """
+        if not element:
+            return False
+            
+        try:
+            # Try scrolling to element
+            driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", element)
+            
+            # Wait for element to be in a stable position
+            self._wait_for_element_stable(driver, element)
+            
+            # Try direct click first
+            try:
+                element.click()
+            except Exception:
+                # Fall back to JavaScript click
+                driver.execute_script("arguments[0].click();", element)
+                
+            print(f"✅ Clicked on {description}")
+            
+            # Wait for any click effects to register
+            WebDriverWait(driver, 2).until(
+                lambda d: d.execute_script("return document.readyState") == "complete"
+            )
+            
+            return True
+        except Exception as e:
+            print(f"❌ Failed to click {description}: {e}")
+            return False
+
+    def adapt_highschool_scores(self, highschool_scores):
+        highschool_subject_name_dict = {
+        "עברית: הבנה, הבעה ולשון": "הבעה עברית",
+        "פיזיקה":"פיסיקה"
+        }
+        # Replace subject names with university's naming
+        for subject in highschool_scores.copy():
+            if subject in highschool_subject_name_dict:
+                highschool_scores[highschool_subject_name_dict[subject]] = highschool_scores.pop(subject)
+                

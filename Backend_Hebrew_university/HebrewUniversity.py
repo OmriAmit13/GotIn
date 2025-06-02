@@ -112,6 +112,7 @@ class HebrewUniversity:
     def __init__(self, service, options):
             self.service = service
             self.options = options
+            self.msg = None
             
     def take_screenshot(self, driver, prefix="debug"):
         """Take a full page screenshot with the given driver and return the path"""
@@ -316,6 +317,13 @@ class HebrewUniversity:
 
                 grade = scores[normalized_name][0]
                 inits= scores[normalized_name][1]
+
+                if normalized_name == "אנגלית" and int(inits) < 4:
+                    self.msg = "כמות היחידות באנגלית נמוכה מדי. נדרש מינימום של 4 יחידות."
+                    print(f"❌ {self.msg}")
+                    driver.quit()
+                    return
+
 
                 # Enter units  for the subject
 
@@ -555,14 +563,19 @@ class HebrewUniversity:
         ]
         res=None
         if degree not in [d["user_input"] for d in self.DEGREES_DATA]:
-            msg = f"התואר '{degree}' לא קיים במערכת הקבלה של האוניברסיטה העברית. יש לבדוק את המידע באתר האוניברסיטה."
-            print("❌", msg)
+            self.msg = f"התואר '{degree}' לא קיים במערכת הקבלה של האוניברסיטה העברית. יש לבדוק את המידע באתר האוניברסיטה."
+            print("❌", self.msg)
             
         else:
             
             driver1=self.getDriver1()
             self.firstPageOfCalculator(driver1)
             self.secondPageOfCalculator(driver1,hs_dict)
+            if self.msg is not None:
+                print("❌", self.msg)
+                driver1.quit()
+                return {"isAccepted": None, "url": None, "message": self.msg}
+            
             highschool_score = self.thirdPageOfCalculator(driver1)
 
             print("Highschool score:", highschool_score)
@@ -583,7 +596,7 @@ class HebrewUniversity:
             return res
 
         else:
-            return {"isAccepted": None, "url": None, "message": msg}
+            return {"isAccepted": None, "url": None, "message": self.msg}
 # import json
 # from selenium import webdriver
 # from selenium.webdriver.chrome.service import Service 
