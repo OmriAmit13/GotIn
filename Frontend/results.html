@@ -105,12 +105,8 @@
                         // Display error message in Hebrew
                         const errorMsg = document.createElement('p');
                         errorMsg.className = 'error-message';
-                        errorMsg.textContent = "תקלה בהבאת הנתונים";
+                        errorMsg.textContent = "תקלה בהבאת הנתונים - אנא נסו שנית";
                         resultItem.appendChild(errorMsg);
-                        const errorDetails = document.createElement('p');
-                        errorDetails.className = 'error-details';
-                        errorDetails.textContent = `${serverResult.error} \n ${serverResult.stackTrace}`;
-                        resultItem.appendChild(errorDetails);
                     }
 
                     resultsContainer.appendChild(resultItem);

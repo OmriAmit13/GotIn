@@ -21,33 +21,20 @@ class TechnionUniversity():
 
     # Dictionary to map website degree names to Technion degree names
     degree_alternative_name_dict = {
-        "הנדסת תוכנה": "הנדסת מחשבים",
-        "הנדסה ביוטכנולוגית": "הנדסה ביוטכנולוגיה ומזון",
+        "הנדסה אזרחית": "הנדסה אזרחית",
+        "הנדסה ביוטכנולוגית": "הנדסה ביוטכנולוגית ומזון",
         "הנדסה ביורפואית": "הנדסה ביו-רפואית",
         "הנדסה תעשייה וניהול": "הנדסת תעשיה וניהול",
-        "מדעי המחשב": "מדעי המחשב",
         "חינוך והוראה": None,
         "מנהל עסקים": None,
-        "מדעי המוח וקוגניציה": None,
-        "סיעוד": None,
-        "פסיכולוגיה": None,
-        "כלכלה": None,
-        "רפואה": "מדעי הרפואה-מגמת רפואה",
-        "עבודה סוציאלית": None,
-        "פיזיותרפיה": None,
-        "ריפוי בעיסוק": None,
         "משפטים": None,
-        "הנדסה אזרחית": "הנדסה אזרחית וסביבתית",
-        "הנדסת חומרים": "מדע והנדסה של חומרים",
-        "הנדסת חשמל": "הנדסת חשמל ומחשבים",
-        "הנדסת מכונות": "הנדסת מכונות",
-        "מתמטיקה": "מתמטיקה",
-        "פיזיקה": "פיזיקה"
+        "עבודה סוציאלית": None,
+        "רפואה": "מדעי הרפואה-מגמת רפואה",
     }
 
     # Dictionary to map high school subject names from website to Technion names
     highschool_subject_name_dict = {
-        "עברית: הבנה, הבעה ולשון": "עברית (הבעה)",
+        "עברית: הבנה, הבעה ולשון": "עברית (הבעה)"	,
         "היסטוריה": "היסטוריה / תולדות עם ישראל",
         "ספרות": "ספרות עברית",
         "אזרחות": "אזרחות",
@@ -126,8 +113,10 @@ class TechnionUniversity():
         for subject, values in hs_dict_original.items():
             if subject in self.highschool_subject_name_dict:
                 technion_subject = self.highschool_subject_name_dict[subject]
+                print(f"Mapped subject '{subject}' to '{technion_subject}'")
                 hs_dict[technion_subject] = values
             else:
+                print(f"Using original subject name: '{subject}'")
                 hs_dict[subject] = values
 
         try:
@@ -152,17 +141,18 @@ class TechnionUniversity():
             tables = bagrut_form.find_elements(By.CLASS_NAME, "two-column-table")
             lines = []
             for table in tables:
+                print(f"table: {table}")
+                print(f"table name: {table.find_element(By.CLASS_NAME, 'sub-title').text.strip()}")
                 tbody = table.find_element(By.TAG_NAME, "tbody")
                 rows = tbody.find_elements(By.TAG_NAME, "tr")
-                if isinstance(rows, list):
-                    lines.extend(rows)
-                else:
-                    lines.append(rows)
+                lines.extend(rows)
+
             time.sleep(2)
             for line in lines:
                 try:
                     subject_name_element = line.find_element(By.TAG_NAME, "th")
                     subject_name = subject_name_element.text.strip()
+                    print(f"Subject found: {subject_name}")
                     if subject_name in hs_dict:
                         score, units = hs_dict[subject_name]
                         td_elements = line.find_elements(By.TAG_NAME, "td")
@@ -172,6 +162,7 @@ class TechnionUniversity():
 
                             dropdown_menu = dropdown_td.find_elements(By.TAG_NAME, "select")
                             if dropdown_menu:
+                                print("entered drop down try")
                                 dropdown_menu = line.find_element(By.TAG_NAME, "select")
                                 select = Select(dropdown_menu)
                                 
@@ -180,8 +171,9 @@ class TechnionUniversity():
                                     driver.quit()
                                     subject_hebrew = "אנגלית" if subject_name == "אנגלית" else "מתמטיקה"
                                     return None, f"דחייה בגלל מספר יחידות לא מספק ב{subject_hebrew}. בטכניון נדרש מינימום 4 יחידות."
-                                select.select_by_value(str(units))
+                                select.select_by_value(units)
                             else:
+                                print(f"No dropdown menu found for subject: {subject_name}")
                                 self.exit(driver, "Missing dropdown")
                             
                             score_input = input_td.find_elements(By.TAG_NAME, "input")
@@ -189,12 +181,15 @@ class TechnionUniversity():
                                 score_input[0].clear()
                                 score_input[0].send_keys(score)
                             else:
+                                print(f"No input field found for subject: {subject_name}")
                                 self.exit(driver, "Missing input field")
                             time.sleep(1)
                             
                             # Remove the subject from hs_dict after processing it
                             del hs_dict[subject_name]
+                            print(f"Removed {subject_name} from hs_dict after processing")
                         else:
+                            print(f"Insufficient <td> elements found for subject: {subject_name}")
                             self.exit(driver, "Insufficient <td> elements")
                         
                 except Exception as e:
@@ -207,6 +202,7 @@ class TechnionUniversity():
             time.sleep(1)
             idx = 1
             for hs_miktzoa, (grade, unit) in hs_dict.items():
+                    print(f"Adding additional subject: {hs_miktzoa}, Score: {grade}, Units: {unit}")
                     time.sleep(1)
                     # Find the row for the current index
                     miktzoa_row = miktzoaBhira_section.find_element(By.ID, f"bhira{idx}")
@@ -217,6 +213,7 @@ class TechnionUniversity():
                     try:
                             select_subject.select_by_visible_text(hs_miktzoa)
                     except NoSuchElementException:
+                            print(f"Subject '{hs_miktzoa}' not found in the dropdown. Selecting 'מקצוע אחר שאינו ברשימה'.")
                             try:
                                     select_subject.select_by_visible_text("מקצוע אחר שאינו ברשימה")
                             except NoSuchElementException:
@@ -248,6 +245,7 @@ class TechnionUniversity():
             psychometry_input = WebDriverWait(driver, 10).until(
                     EC.visibility_of_element_located((By.ID, "psychometry"))
             )
+            print("psychometry")
             time.sleep(1)
             psychometry_input.clear()
             time.sleep(1)
@@ -269,8 +267,12 @@ class TechnionUniversity():
                 alert = WebDriverWait(driver, 3).until(EC.alert_is_present())
                 if alert:
                     alert_text = alert.text
+                    print(f"Alert detected: {alert_text}")
                     alert.accept()  # Click OK on the alert
+                    print("Clicked OK on alert")
             except TimeoutException:
+                print("No browser alert appeared")
+                
                 # Then check for UI dialog popup
                 try:
                     popup = WebDriverWait(driver, 3).until(
@@ -278,8 +280,10 @@ class TechnionUniversity():
                     )
                     popup_text = popup.find_element(By.CLASS_NAME, "ui-dialog-content").text
                     if "4 יחידות" in popup_text and "מתמטיקה" in popup_text:
+                        print("Detected 4-unit math warning popup")
                         ok_button = popup.find_element(By.CLASS_NAME, "ui-button")
                         ok_button.click()
+                        print("Clicked OK on 4-unit math popup")
                 except TimeoutException:
                     print("No UI dialog popup appeared")
             
@@ -295,9 +299,11 @@ class TechnionUniversity():
             match = re.search(r"([\d.]+)$", text)
             if match:
                 calculated_sum = float(match.group(1))
+                print("Extracted number:", calculated_sum)
                 driver.quit()
                 return calculated_sum, None
             else:
+                print("No number found.")
                 driver.quit()
                 return None, "לא ניתן לחשב את הסכם שלך"
 
@@ -318,6 +324,7 @@ class TechnionUniversity():
                     match = re.search(r"([\d.]+)$", text)
                     if match:
                         calculated_sum = float(match.group(1))
+                        print("Extracted number after handling alert:", calculated_sum)
                         driver.quit()
                         return calculated_sum
                 except Exception:
@@ -355,8 +362,10 @@ class TechnionUniversity():
                 if technion_degree is None:
                     driver.quit()
                     return None, f"תואר {requested_degree} לא קיים בטכניון"
+                print(f"Mapped '{requested_degree}' to '{technion_degree}'")
             else:
                 technion_degree = requested_degree
+                print(f"Using original degree name: '{technion_degree}'")
                 
             accordion_content = driver.find_element(By.ID, "fl-accordion-j5qntrlu9hwf-panel-0")
             tbody = accordion_content.find_element(By.TAG_NAME, "tbody")
@@ -371,20 +380,24 @@ class TechnionUniversity():
                 if technion_degree in cells[0].text:
                     # Extract the סכם נדרש לקבלה value from the corresponding cell
                     required_sum = float(cells[2].text)
+                    print(f"Degree: {technion_degree}")
                     time.sleep(1)
                     found = True
                     if (required_sum > calculated_sum):
+                        print(f"You didn't get in :(. \n Required Sum: {required_sum} \n Your Sum: {calculated_sum}")
                         driver.quit()
                         return "דחייה", None
                     else:
+                        print(f"You got in! :) \n Required Sum: {required_sum} \n Your Sum: {calculated_sum}")
                         driver.quit()
                         return "קבלה", None
             
             if not found:        
+                print(f"Degree '{technion_degree}' not found in the table.")
                 driver.quit()
-                return None, f"לא נמצא מידע על תואר {requested_degree}"
-                
+                return None, f"תואר {requested_degree} לא קיים בטכניון"                
         except Exception as e:
+            print(f"Error checking acceptance: {e}")
             driver.quit()
             return None, f"שגיאה בבדיקת הקבלה: {str(e)}"
 

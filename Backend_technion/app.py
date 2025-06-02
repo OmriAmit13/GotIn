@@ -16,12 +16,10 @@ chrome_options = Options()
 chrome_options.add_argument("--headless")
 service = Service(ChromeDriverManager().install())
 
-### initialize the university classes ###
-technion_university = TechnionUniversity(service, chrome_options)
-
 # Route for Technion University analysis
 @app.route('/Technion', methods=['POST'])
 def technion_handler():
+    technion_university = TechnionUniversity(service, chrome_options)
     try:
         request_data = request.get_json()
         logging.info("Received data: %s", request_data)

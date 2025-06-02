@@ -78,6 +78,20 @@ class BenGurionUniversity:
                 "message": message     # Descriptive message about admission result
             }
         """
+
+        if request_data["subject"] == "משפטים":
+            return {
+                "isAccepted": None,
+                "url": self.base_url,
+                "message": "לא קיים תואר משפטים בבן גוריון"
+            }
+        elif request_data["subject"] == "מנהל עסקים":
+            return {
+                "isAccepted": None,
+                "url": self.base_url,
+                "message": "לא קיים תואר מנהל עסקים בבן גוריון"
+            }
+
         # Handle alternate psychometric score formats
         if "psycho_score" in request_data:
             # Convert from frontend format to our internal format
@@ -127,6 +141,9 @@ class BenGurionUniversity:
         
         # Handle degrees_to_check more robustly - could be array, string, or come from subject field
         degrees_to_check_raw = request_data.get("degrees_to_check", [])
+        if "משפטים" in degrees_to_check:
+            self.close_browser()
+            return {"isAccepted": None, "url": self.base_url, "message": "לא קיים תואר משפטים בבן גוריון"}
         
         # Convert to list if it's a string
         if isinstance(degrees_to_check_raw, str):
@@ -1197,7 +1214,7 @@ class BenGurionUniversity:
             "חינוך והוראה": "חינוך והוראה",
             "מדעי המחשב": "מדעי המחשב",
             "משפטים": "משפטים",
-            "מנהל עסקים": "מנהל עסקים",
+            "מנהל עסקים": "ניהול",
             "סיעוד": "סיעוד",
             "הנדסת מכונות": "הנדסת מכונות",
             "הנדסה אזרחית/הנדסת בנייין": "הנדסה אזרחית/הנדסת בנייין",
@@ -1327,7 +1344,10 @@ class BenGurionUniversity:
     def adapt_highschool_scores(self, highschool_scores):
         highschool_subject_name_dict = {
         "עברית: הבנה, הבעה ולשון": "הבעה עברית",
-        "פיזיקה":"פיסיקה"
+        "פיזיקה":"פיסיקה",
+        "חינוך פיננסי":"כלכלה",
+        "לימודי ארץ ישראל וארכיאולוגיה":"לימודי ארץ ישראל",
+        "מערכות מידע":"מערכות מידענות ממוחשבות"
         }
         # Replace subject names with university's naming
         for subject in highschool_scores.copy():

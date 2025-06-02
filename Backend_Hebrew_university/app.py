@@ -20,14 +20,10 @@ chrome_options.add_argument("--headless")
 #service = Service(r"C:\Users\Raz Zana\Desktop\chromedriver-win64\chromedriver.exe")
 service = Service(ChromeDriverManager().install())
 
-
-### initialize the university classes ###
-hebrew_university = HebrewUniversity(service, chrome_options)
-
-
 # Route for hebrew University analysis
 @app.route('/HebrewUniversity', methods=['POST'])
 def hebrew_handler():
+    hebrew_university = HebrewUniversity(service, chrome_options)
     try:
         request_data = request.get_json()
 

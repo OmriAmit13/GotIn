@@ -39,7 +39,7 @@ class HebrewUniversity:
         {
             "user_input": "מנהל עסקים",
             "site_option_1": "מנהל עסקים",
-            "site_option_2": "מנהל עסקים,דו-חוגי"
+            "site_option_2": "מנהל עסקים, דו-חוגי"
         },
         {
             "user_input": "סיעוד",
@@ -59,7 +59,7 @@ class HebrewUniversity:
         {
             "user_input": "פסיכולוגיה",
             "site_option_1": "פסיכולוגיה",
-            "site_option_2": "פסיכולוגה, דו-חוגי"
+            "site_option_2": "פסיכולוגיה, דו-חוגי"
         },
         {
             "user_input": "כלכלה",
@@ -69,7 +69,7 @@ class HebrewUniversity:
         {
             "user_input": "רפואה",
             "site_option_1": "רפואה",
-            "site_option_2": "רפואה,חד-חוגי, לימודים פרה קליניים"
+            "site_option_2": "רפואה, חד-חוגי, לימודים פרה קליניים"
         },
         {
             "user_input": "עבודה סוציאלית",
@@ -87,8 +87,8 @@ class HebrewUniversity:
             "site_option_2": "פיסיקה, חד-חוגי"
         },
         {
-            "user_input": "מדעי המוח וקוגניציה" ,
-            "site_option_1": "מדעי המוח",
+           "user_input": "מדעי המוח וקוגניציה" ,
+            "site_option_1": "מדעי הקוגניציה והמוח",
             "site_option_2": "מדעי הקוגניציה והמוח, דו-חוגי"
         },
         {
@@ -549,4 +549,4 @@ class HebrewUniversity:
             return res
 
         else:
-            return {"isAccepted": None, "url": None, "message": self.msg}
+            return {"isAccepted": None, "url":  "https://go.huji.ac.il/?locale=he" , "message": self.msg}

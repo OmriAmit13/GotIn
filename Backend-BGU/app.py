@@ -13,13 +13,11 @@ CORS(app)  # Enable CORS for all routes in the application
 chrome_options = Options()
 chrome_options.add_argument("--headless")
 service = Service(ChromeDriverManager().install())
-
-### initialize the university classes ###
-ben_gurion_university = BenGurionUniversity(service, chrome_options)
     
 # Route for Ben Gurion University analysis
 @app.route('/BenGurion', methods=['POST'])
 def ben_gurion_handler():
+    ben_gurion_university = BenGurionUniversity(service, chrome_options)
     try:
         request_data = request.get_json()
         result = ben_gurion_university.run(request_data)
