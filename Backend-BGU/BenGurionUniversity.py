@@ -10,6 +10,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import WebDriverException, InvalidSessionIdException, NoSuchWindowException, TimeoutException, StaleElementReferenceException
 from webdriver_manager.chrome import ChromeDriverManager
+import time
 
 class BenGurionUniversity:
     """
@@ -18,13 +19,6 @@ class BenGurionUniversity:
     """
 
     def __init__(self, service=None, chrome_options=None):
-        """
-        Initialize with browser configuration.
-        
-        Args:
-            service: Chrome service instance (optional, will use WebDriverManager if None)
-            chrome_options: Chrome options instance (optional, will create default options if None)
-        """
         # Store browser configuration for later
         self.service = service
         self.chrome_options = chrome_options
@@ -63,9 +57,7 @@ class BenGurionUniversity:
             self.wait = WebDriverWait(self.driver, wait_time)
     
     def close_browser(self):
-        """
-        Close the browser session if open.
-        """
+    
         if self.driver:
             self.driver.quit()
             self.driver = None
@@ -104,208 +96,124 @@ class BenGurionUniversity:
                 "english": 0
             }
         results = {}
-        output_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "admission_results.json")
+            
+        # Start browser and prepare input data
+        print("🚀 Starting Ben Gurion University admission check...")
+        print("💻 Operating System: " + os.name)
         
-        # Check if we have a saved results file we can use as fallback
-        try_scraping = True
-        if os.path.exists(output_path):
-            try:
-                with open(output_path, "r", encoding="utf-8") as f:
-                    cached_results = json.load(f)
-                    # print("✅ Found cached results to use as fallback if needed")
-            except:
-                cached_results = {}
-                # print("⚠️ Could not read cached results file")
+        # Configure Chrome options with additional compatibility settings
+        if self.chrome_options is None:
+            self.chrome_options = Options()
+            self.chrome_options.add_argument("--headless=new")
+            self.chrome_options.add_argument("--disable-gpu")
+            self.chrome_options.add_argument("--window-size=1920,1080")
+            self.chrome_options.add_argument("--no-sandbox")
+            self.chrome_options.add_argument("--disable-dev-shm-usage")
+            # Add additional options for cross-platform compatibility
+            self.chrome_options.add_argument("--disable-extensions")
+            self.chrome_options.add_argument("--disable-web-security")
+            self.chrome_options.add_argument("--allow-running-insecure-content")
+        
+        self.start_browser()
+        driver = self.driver
+        wait = self.wait
+        
+        # Get the data from the request
+        highschool_scores = request_data.get("highschool_scores", {})
+
+        self.adapt_highschool_scores(highschool_scores)
+
+        psychometric = request_data.get("psychometric", {})
+        
+        # Handle degrees_to_check more robustly - could be array, string, or come from subject field
+        degrees_to_check_raw = request_data.get("degrees_to_check", [])
+        
+        # Convert to list if it's a string
+        if isinstance(degrees_to_check_raw, str):
+            degrees_to_check = [degrees_to_check_raw]
+        # If it's a list already, use it as is
+        elif isinstance(degrees_to_check_raw, list):
+            degrees_to_check = degrees_to_check_raw
+        # Otherwise default to empty list
         else:
-            cached_results = {}
+            degrees_to_check = []
             
+        # If degrees_to_check is empty and subject is provided, use subject
+        if not degrees_to_check and "subject" in request_data:
+            degrees_to_check = [request_data["subject"]]
+            
+        # print(f"Degrees to check: {degrees_to_check}")
+        
+        # Navigate to the calculator page
+        driver.get(self.base_url)
+        driver.maximize_window()
+        
+        # Handle popup window if present
+        # print("🔍 Checking for popup...")
         try:
-            # Start browser and prepare input data
-            print("🚀 Starting Ben Gurion University admission check...")
-            print("💻 Operating System: " + os.name)
-            
-            # Configure Chrome options with additional compatibility settings
-            if self.chrome_options is None:
-                self.chrome_options = Options()
-                self.chrome_options.add_argument("--headless=new")
-                self.chrome_options.add_argument("--disable-gpu")
-                self.chrome_options.add_argument("--window-size=1920,1080")
-                self.chrome_options.add_argument("--no-sandbox")
-                self.chrome_options.add_argument("--disable-dev-shm-usage")
-                # Add additional options for cross-platform compatibility
-                self.chrome_options.add_argument("--disable-extensions")
-                self.chrome_options.add_argument("--disable-web-security")
-                self.chrome_options.add_argument("--allow-running-insecure-content")
-            
-            self.start_browser()
-            driver = self.driver
-            wait = self.wait
-            
-            # Get the data from the request
-            highschool_scores = request_data.get("highschool_scores", {})
-
-            self.adapt_highschool_scores(highschool_scores)
-
-            psychometric = request_data.get("psychometric", {})
-            
-            # Handle degrees_to_check more robustly - could be array, string, or come from subject field
-            degrees_to_check_raw = request_data.get("degrees_to_check", [])
-            
-            # Convert to list if it's a string
-            if isinstance(degrees_to_check_raw, str):
-                degrees_to_check = [degrees_to_check_raw]
-            # If it's a list already, use it as is
-            elif isinstance(degrees_to_check_raw, list):
-                degrees_to_check = degrees_to_check_raw
-            # Otherwise default to empty list
-            else:
-                degrees_to_check = []
-                
-            # If degrees_to_check is empty and subject is provided, use subject
-            if not degrees_to_check and "subject" in request_data:
-                degrees_to_check = [request_data["subject"]]
-                
-            # print(f"Degrees to check: {degrees_to_check}")
-            
-            # Navigate to the calculator page
-            driver.get(self.base_url)
-            driver.maximize_window()
-            
-            # Handle popup window if present
-            # print("🔍 Checking for popup...")
-            try:
-                popup_close_btn = wait.until(
-                    EC.element_to_be_clickable((By.ID, "closeXButton"))
-                )
-                driver.execute_script("arguments[0].click();", popup_close_btn)
-                # print("✅ Popup closed.")
-            except Exception as e:
-                # print(f"ℹ️ No popup detected: {e}")
-                pass
-
-            # Accept cookies if needed
-            # print("🍪 Looking for cookie accept button...")
-            try:
-                cookie_btn = wait.until(
-                    EC.element_to_be_clickable((By.ID, "ct-ultimate-gdpr-cookie-accept"))
-                )
-                cookie_btn.click()
-                # print("✅ Cookie accepted.")
-            except Exception as e:
-                # print(f"ℹ️ No cookie prompt found: {e}")
-                pass
-
-            # Switch to iframe containing the calculator
-            # print("🔍 Looking for iframe...")
-            try:
-                iframe = wait.until(
-                    EC.presence_of_element_located((By.CSS_SELECTOR, "iframe[src*='apps4cloud.bgu.ac.il/calcprod']"))
-                )
-                driver.switch_to.frame(iframe)
-                # print("✅ Switched to iframe.")
-            except Exception as e:
-                # print(f"❌ Failed to switch to iframe: {e}")
-                return {"error": "Could not find calculator iframe"}
-
-            # Click on "Calculate High School Average" button
-            # print("🟠 Looking for 'לחישוב ממוצע בגרות' button...")
-            try:
-                calc_button = wait.until(
-                    EC.element_to_be_clickable((By.CSS_SELECTOR, "a.page-link.go-to-average"))
-                )
-                driver.execute_script("arguments[0].click();", calc_button)
-                # print("✅ Clicked 'לחישוב ממוצע בגרות' button.")
-            except Exception as e:
-                # print(f"❌ Could not click: {e}")
-                return {"error": "Could not navigate to high school average calculator"}
-                
-            # Fill high school subject scores
-            self._fill_highschool_scores(driver, wait, highschool_scores)
-
-            # Calculate high school average
-            average_score = self._calculate_high_school_average(driver, wait)
-            
-            # Go back to main page and enter calculated average
-            self._navigate_to_main_and_enter_average(driver, wait, average_score)
-            
-            # Handle science bonus subjects
-            self._fill_science_bonus_subjects(driver, wait, highschool_scores)
-            
-            # Navigate through next pages to reach psychometric section
-            self._navigate_to_psychometric_page(driver, wait)
-            
-            # Enter psychometric scores
-            self._fill_psychometric_scores(driver, wait, psychometric)
-            
-            # Complete navigation through remaining pages
-            self._navigate_to_results_page(driver, wait)
-            
-            # Try to view acceptance list directly
-            try:
-                results = self._check_acceptance_list(driver, wait, degrees_to_check)
-            except Exception as e:
-                print(f"❌ Could not retrieve acceptance list: {e}")
-                print("⚠️ Falling back to individual degree checking...")
-                results = self._check_degree_acceptance(driver, wait, degrees_to_check)
-            
-            # Save results to file
-            with open(output_path, "w", encoding="utf-8") as f:
-                json.dump(results, f, ensure_ascii=False, indent=2)
-            
-            print(f"✅ Admission results saved to {output_path}")
-            
+            popup_close_btn = wait.until(
+                EC.element_to_be_clickable((By.ID, "closeXButton"))
+            )
+            driver.execute_script("arguments[0].click();", popup_close_btn)
+            # print("✅ Popup closed.")
         except Exception as e:
-            print(f"❌ Error in BenGurionUniversity.run: {e}")
-            traceback.print_exc()
+            # print(f"ℹ️ No popup detected: {e}")
+            pass
+
+        # Accept cookies if needed
+        # print("🍪 Looking for cookie accept button...")
+        try:
+            cookie_btn = wait.until(
+                EC.element_to_be_clickable((By.ID, "ct-ultimate-gdpr-cookie-accept"))
+            )
+            cookie_btn.click()
+            # print("✅ Cookie accepted.")
+        except Exception as e:
+            # print(f"ℹ️ No cookie prompt found: {e}")
+            pass
+
+        # Switch to iframe containing the calculator
+        # print("🔍 Looking for iframe...")
+        iframe = wait.until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "iframe[src*='apps4cloud.bgu.ac.il/calcprod']"))
+        )
+        driver.switch_to.frame(iframe)
+
+
+        # Click on "Calculate High School Average" button
+        # print("🟠 Looking for 'לחישוב ממוצע בגרות' button...")
+        
+        calc_button = wait.until(
+            EC.element_to_be_clickable((By.CSS_SELECTOR, "a.page-link.go-to-average"))
+        )
+        driver.execute_script("arguments[0].click();", calc_button)
+        # print("✅ Clicked 'לחישוב ממוצע בגרות' button.")
             
-            # Use cached results as fallback if we couldn't get any results from scraping
-            if not results:
-                if cached_results and request_data.get("degrees_to_check"):
-                    print("⚠️ Using cached results as fallback")
-                    requested_degrees = request_data.get("degrees_to_check", [])
-                    results = {degree: cached_results.get(degree, "לא ידוע") for degree in requested_degrees}
-                else:
-                    # Generate mock results based on input data
-                    print("⚠️ Generating mock results as fallback")
-                    print("📋 Note: You can customize these mock results by editing admission_results.json")
-                    psychometric = request_data.get("psychometric", {})
-                    total_score = psychometric.get("total", 0)
-                    requested_degrees = request_data.get("degrees_to_check", [])
-                    
-                    # More sophisticated algorithm based on real admission thresholds
-                    results = {}
-                    
-                    # High demand engineering and science programs
-                    high_demand = ["מדעי המחשב", "הנדסת חשמל", "הנדסת מכונות", "רפואה"]
-                    # Medium demand programs
-                    medium_demand = ["כלכלה", "פסיכולוגיה", "מנהל עסקים", "הנדסת תעשייה וניהול"]
-                    # Lower threshold programs
-                    lower_threshold = ["חינוך והוראה", "עבודה סוציאלית", "מדעי החברה"]
-                    
-                    for degree in requested_degrees:
-                        if degree in high_demand:
-                            # High demand programs need higher scores
-                            results[degree] = "התקבלתי" if total_score >= 700 else "לא התקבלתי"
-                        elif degree in medium_demand:
-                            # Medium demand programs
-                            results[degree] = "התקבלתי" if total_score >= 650 else "לא התקבלתי"
-                        elif degree in lower_threshold:
-                            # Lower threshold programs
-                            results[degree] = "התקבלתי" if total_score >= 600 else "לא התקבלתי"
-                        else:
-                            # Other programs use a generic threshold
-                            results[degree] = "התקבלתי" if total_score >= 625 else "לא התקבלתי"
-                    
-                    # Save mock results to the file for future reference
-                    try:
-                        with open(output_path, "w", encoding="utf-8") as f:
-                            json.dump(results, f, ensure_ascii=False, indent=2)
-                        print(f"✅ Saved mock results to {output_path}")
-                    except Exception as save_error:
-                        print(f"⚠️ Failed to save mock results: {save_error}")
-        finally:
-            # Always close the browser
-            self.close_browser()
+        # Fill high school subject scores
+        self._fill_highschool_scores(driver, wait, highschool_scores)
+
+        # Calculate high school average
+        average_score = self._calculate_high_school_average(driver, wait)
+        
+        # Go back to main page and enter calculated average
+        self._navigate_to_main_and_enter_average(driver, wait, average_score)
+        
+        # Handle science bonus subjects
+        self._fill_science_bonus_subjects(driver, wait, highschool_scores)
+        
+        # Navigate through next pages to reach psychometric section
+        self._navigate_to_psychometric_page(driver, wait)
+        
+        # Enter psychometric scores
+        self._fill_psychometric_scores(driver, wait, psychometric)
+        
+        # Complete navigation through remaining pages
+        self._navigate_to_results_page(driver, wait)
+        
+        # Try to view acceptance list directly
+        results = self._check_acceptance_list(driver, wait, degrees_to_check)
+
+        self.close_browser()
         
         # Original results dictionary with degree-specific results
         all_degrees_results = results
@@ -370,9 +278,9 @@ class BenGurionUniversity:
         
         # Prioritize Math and Physics first, then add other subjects
         ordered_subjects = []
-        if "מתמטיקה" in highschool_scores:
+        if "מתמטיקה" in highschool_scores.keys():
             ordered_subjects.append(("מתמטיקה", highschool_scores["מתמטיקה"]))
-        if "פיסיקה" in highschool_scores:
+        if "פיסיקה" in highschool_scores.keys():
             ordered_subjects.append(("פיסיקה", highschool_scores["פיסיקה"]))
         
         # Add remaining subjects
@@ -385,54 +293,27 @@ class BenGurionUniversity:
 
         # Click the add button for each additional subject (first one is already open)
         for i in range(num_subjects - 1):
-            try:
-                # print(f"➕ Adding subject field {i+2}/{num_subjects}")
-                
-                # Scroll up to make sure the button is visible
-                driver.execute_script("window.scrollTo(0, 0);")
-                
-                # Wait for the page to scroll to top
-                try:
-                    WebDriverWait(driver, 2).until(
-                        lambda d: d.execute_script("return window.pageYOffset") == 0
-                    )
-                except TimeoutException:
-                    pass  # Continue even if the condition times out
-                
-                # Try different methods to find the add button
-                try:
-                    add_button = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, "add-subject")))
-                except:
-                    try:
-                        # Try by text content
-                        add_button = wait.until(EC.element_to_be_clickable(
-                            (By.XPATH, "//button[contains(@class, 'add') or contains(text(), 'נוסף')]")
-                        ))
-                    except:
-                        # Try by generic button
-                        buttons = driver.find_elements(By.TAG_NAME, "button")
-                        add_button = None
-                        for button in buttons:
-                            if "add" in button.get_attribute("class").lower() or "הוס" in button.text:
-                                add_button = button
-                                break
-                        
-                        if add_button is None:
-                            raise Exception("Could not find add button")
-                
-                # Click the button
-                self._safe_click(driver, add_button, f"add subject button {i+2}")
-                
-                # Wait for new field to appear
-                WebDriverWait(driver, 3).until(
-                    lambda d: len(d.find_elements(By.CSS_SELECTOR, ".user-field")) > i+1
-                )
-                
+            # print(f"➕ Adding subject field {i+2}/{num_subjects}")
+            
+            # Scroll up to make sure the button is visible
+            driver.execute_script("window.scrollTo(0, 0);")
+            
+            # Wait for the page to scroll to top
+            WebDriverWait(driver, 2).until(
+                lambda d: d.execute_script("return window.pageYOffset") == 0
+            )
+            add_button = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, "add-subject")))
+            
+            # Click the button
+            self._safe_click(driver, add_button, f"add subject button {i+2}")
+            
+            # Wait for new field to appear
+            WebDriverWait(driver, 3).until(
+                lambda d: len(d.find_elements(By.CSS_SELECTOR, ".user-field")) > i+1
+            )
+            
                 # print("✅ Added new subject field")
-                
-            except Exception as e:
-                # print(f"❌ Failed to add subject field: {e}")
-                pass
+         
 
         # Fill in subject data for each subject
         # print("\n📝 Entering subject information...")
@@ -463,16 +344,6 @@ class BenGurionUniversity:
                 )
                 
                 input_element.send_keys(Keys.ENTER)
-                
-                # # Wait for selection to be applied
-                # WebDriverWait(driver, 3).until(
-                #     lambda d: d.execute_script(
-                #         "return arguments[0].parentElement.parentElement.className.includes('has-value')",
-                #         input_element
-                #     )
-                # )
-                
-                # print(f"📝 Entered subject name: {subject}")
             
             # Find and fill level/units field
             level_input = self._find_element_with_retry(driver, wait,
@@ -502,7 +373,7 @@ class BenGurionUniversity:
             else:
                 Exception(f"Could not find grade input for subject {subject}")
             
-            # print(f"✅ Subject {subject} entered successfully")
+            print(f"✅ Subject {subject} entered successfully")
             
             # Wait for page to register the input
             driver.implicitly_wait(1)
@@ -513,72 +384,64 @@ class BenGurionUniversity:
 
     def _calculate_high_school_average(self, driver, wait):
         """Calculate high school average after entering all scores."""
-        try:
             # Click calculate average button
-            calc_button = wait.until(
-                EC.element_to_be_clickable((By.CSS_SELECTOR, "button.page-link"))
-            )
-            self._safe_click(driver, calc_button, "calculate average button")
-            
-            # Wait for calculation to complete and result to appear
-            avg_element = wait.until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, ".calculated-result-holder span"))
-            )
-            
-            # Wait for the result to be populated
-            WebDriverWait(driver, 5).until(
-                lambda d: avg_element.get_attribute("innerText").strip() != ""
-            )
-            
-            average_score = avg_element.get_attribute("innerText").strip()
-            # print(f"🎯 Calculated high school average: {average_score}")
-            return average_score
-            
-        except Exception as e:
-            # print(f"❌ Failed to calculate average: {e}")
-            return "85"  # Return a default value if calculation fails
+        calc_button = wait.until(
+            EC.element_to_be_clickable((By.CSS_SELECTOR, "button.page-link"))
+        )
+        self._safe_click(driver, calc_button, "calculate average button")
+        
+        # Wait for calculation to complete and result to appear
+        avg_element = wait.until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, ".calculated-result-holder span"))
+        )
+        
+        # Wait for the result to be populated
+        WebDriverWait(driver, 20).until(
+            lambda d: avg_element.get_attribute("innerText").strip() != ""
+        )
+        
+        average_score = avg_element.get_attribute("innerText").strip()
+        print(f"🎯 Calculated high school average: {average_score}")
+        return average_score
     
     def _navigate_to_main_and_enter_average(self, driver, wait, average_score):
         """Navigate back to main page and enter the calculated average."""
-        try:
-            # Go back to main page
-            back_link = wait.until(
-                EC.element_to_be_clickable((By.CSS_SELECTOR, "a.page-link.short-link.prev-link"))
-            )
-            self._safe_click(driver, back_link, "back to main page button")
-            print("🔙 Returned to main page.")
-            
-            # Wait for iframe to reload
-            driver.switch_to.default_content()
-            
-            # Wait for the iframe to be available
-            iframe = wait.until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, "iframe[src*='apps4cloud.bgu.ac.il/calcprod']"))
-            )
-            
-            driver.switch_to.frame(iframe)
-            print("🔁 Re-entered iframe.")
-            
-            # Wait for page to load inside iframe
-            WebDriverWait(driver, 5).until(
-                EC.presence_of_element_located((By.CLASS_NAME, "simple-input"))
-            )
-            
-            # Enter the high school average
-            avg_input = wait.until(
-                EC.presence_of_element_located((By.CLASS_NAME, "simple-input"))
-            )
-            driver.execute_script("arguments[0].scrollIntoView({block: 'start'});", avg_input)
-            
-            # Wait for element to be in view and stable
-            self._wait_for_element_stable(driver, avg_input)
-            
-            avg_input.clear()
-            avg_input.send_keys(average_score)
-            print(f"✅ Entered high school average: {average_score}")
-            
-        except Exception as e:
-            print(f"❌ Failed in navigate_to_main_and_enter_average: {e}")
+        # Go back to main page
+        back_link = wait.until(
+            EC.element_to_be_clickable((By.CSS_SELECTOR, "a.page-link.short-link.prev-link"))
+        )
+        self._safe_click(driver, back_link, "back to main page button")
+        print("🔙 Returned to main page.")
+        
+        # Wait for iframe to reload
+        driver.switch_to.default_content()
+        
+        # Wait for the iframe to be available
+        iframe = wait.until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "iframe[src*='apps4cloud.bgu.ac.il/calcprod']"))
+        )
+        
+        driver.switch_to.frame(iframe)
+        print("🔁 Re-entered iframe.")
+        
+        # Wait for page to load inside iframe
+        WebDriverWait(driver, 5).until(
+            EC.presence_of_element_located((By.CLASS_NAME, "simple-input"))
+        )
+        
+        # Enter the high school average
+        avg_input = wait.until(
+            EC.presence_of_element_located((By.CLASS_NAME, "simple-input"))
+        )
+        driver.execute_script("arguments[0].scrollIntoView({block: 'start'});", avg_input)
+        
+        # Wait for element to be in view and stable
+        self._wait_for_element_stable(driver, avg_input)
+        
+        avg_input.clear()
+        avg_input.send_keys(average_score)
+        print(f"✅ Entered high school average: {average_score}")
+
 
     def _fill_science_bonus_subjects(self, driver, wait, highschool_scores):
         """Fill science bonus subjects."""
@@ -596,10 +459,8 @@ class BenGurionUniversity:
         # Physics handling
         print("\n📊 Handling Physics (פיסיקה/פיזיקה)...")
         physics_key = None
-        if "פיסיקה" in highschool_scores:
+        if "פיסיקה" in highschool_scores.keys():
             physics_key = "פיסיקה"
-        elif "פיזיקה" in highschool_scores:
-            physics_key = "פיזיקה"
             
         if physics_key:
             physics_grade, physics_level = highschool_scores[physics_key]
@@ -636,137 +497,134 @@ class BenGurionUniversity:
         subject_idx = idx + 2  # Start after math & physics
         print(f"\n🔬 Processing science subject #{idx+1}: {subject}")
         
-        try:
-            # Add new subject field
-            add_subject_btn = self._find_element_with_retry(driver, wait, [
-                (By.CLASS_NAME, "add-subject"),
-                (By.XPATH, "//button[contains(text(), 'הוספת מקצוע מדעי')]"),
-                (By.XPATH, "//button[contains(@class, 'add') or contains(@class, 'button')]")
-            ])
+        # Add new subject field
+        add_subject_btn = self._find_element_with_retry(driver, wait, [
+            (By.CLASS_NAME, "add-subject"),
+            (By.XPATH, "//button[contains(text(), 'הוספת מקצוע מדעי')]"),
+            (By.XPATH, "//button[contains(@class, 'add') or contains(@class, 'button')]")
+        ])
+        
+        if add_subject_btn:
+            # Scroll to ensure visibility and click
+            driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
             
-            if add_subject_btn:
-                # Scroll to ensure visibility and click
-                driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-                
-                # Wait for page to scroll to bottom
-                try:
+            # Wait for page to scroll to bottom
+            try:
+                WebDriverWait(driver, 2).until(
+                    lambda d: d.execute_script(
+                        "return (window.innerHeight + window.pageYOffset) >= document.body.scrollHeight"
+                    )
+                )
+            except TimeoutException:
+                pass  # Continue even if the condition times out
+            
+            # Scroll the button into view
+            driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", add_subject_btn)
+            
+            # Wait for element to be stable in view
+            self._wait_for_element_stable(driver, add_subject_btn)
+            
+            # Click the add button
+            self._safe_click(driver, add_subject_btn, f"add subject button for {subject}")
+            
+            # Wait for UI to update - new field to appear
+            WebDriverWait(driver, 3).until(
+                lambda d: len(d.find_elements(By.CSS_SELECTOR, ".user-field")) > subject_idx
+            )
+            
+            print(f"✅ Added field for subject #{idx+1}: {subject}")
+        else:
+            print("❌ Could not find add subject button")
+            return
+            
+        # Find and use the subject dropdown
+        dropdown = None
+        dropdown_found = False
+        
+        # Try different possible ID patterns for the dropdown
+        for id_num in range(4, 15):
+            try:
+                potential_id = f"react-select-{id_num}-input"
+                dropdown = driver.find_element(By.ID, potential_id)
+                # Check if it's empty or the last one
+                if not dropdown.get_attribute("value"):
+                    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", dropdown)
+                    
+                    # Wait for element to be in view and stable
+                    self._wait_for_element_stable(driver, dropdown)
+                    
+                    dropdown.clear()
+                    dropdown.send_keys(subject)
+                    
+                    # Wait for dropdown to appear
+                    try:
+                        WebDriverWait(driver, 2).until(
+                            lambda d: len(d.find_elements(By.CSS_SELECTOR, ".react-select__menu")) > 0
+                        )
+                    except TimeoutException:
+                        pass
+                        
+                    dropdown.send_keys(Keys.ENTER)
+                    
+                    # Wait for selection to be applied
                     WebDriverWait(driver, 2).until(
                         lambda d: d.execute_script(
-                            "return (window.innerHeight + window.pageYOffset) >= document.body.scrollHeight"
+                            "return arguments[0].parentElement.parentElement.className.includes('has-value')",
+                            dropdown
                         )
                     )
-                except TimeoutException:
-                    pass  # Continue even if the condition times out
+                    
+                    print(f"✅ Selected subject: {subject}")
+                    dropdown_found = True
+                    break
+            except Exception:
+                continue
                 
-                # Scroll the button into view
-                driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", add_subject_btn)
-                
-                # Wait for element to be stable in view
-                self._wait_for_element_stable(driver, add_subject_btn)
-                
-                # Click the add button
-                self._safe_click(driver, add_subject_btn, f"add subject button for {subject}")
-                
-                # Wait for UI to update - new field to appear
-                WebDriverWait(driver, 3).until(
-                    lambda d: len(d.find_elements(By.CSS_SELECTOR, ".user-field")) > subject_idx
-                )
-                
-                print(f"✅ Added field for subject #{idx+1}: {subject}")
-            else:
-                print("❌ Could not find add subject button")
-                return
-                
-            # Find and use the subject dropdown
-            dropdown = None
-            dropdown_found = False
-            
-            # Try different possible ID patterns for the dropdown
-            for id_num in range(4, 15):
-                try:
-                    potential_id = f"react-select-{id_num}-input"
-                    dropdown = driver.find_element(By.ID, potential_id)
-                    # Check if it's empty or the last one
+        if not dropdown_found:
+            # Fallback - try any empty dropdown
+            try:
+                dropdowns = driver.find_elements(By.CSS_SELECTOR, ".react-select__input input")
+                for dropdown in dropdowns:
                     if not dropdown.get_attribute("value"):
-                        driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", dropdown)
-                        
-                        # Wait for element to be in view and stable
-                        self._wait_for_element_stable(driver, dropdown)
-                        
                         dropdown.clear()
                         dropdown.send_keys(subject)
                         
-                        # Wait for dropdown to appear
-                        try:
-                            WebDriverWait(driver, 2).until(
-                                lambda d: len(d.find_elements(By.CSS_SELECTOR, ".react-select__menu")) > 0
-                            )
-                        except TimeoutException:
-                            pass
-                            
-                        dropdown.send_keys(Keys.ENTER)
-                        
-                        # Wait for selection to be applied
+                        # Wait for dropdown options
                         WebDriverWait(driver, 2).until(
-                            lambda d: d.execute_script(
-                                "return arguments[0].parentElement.parentElement.className.includes('has-value')",
-                                dropdown
-                            )
+                            lambda d: len(d.find_elements(By.CSS_SELECTOR, ".react-select__menu")) > 0
                         )
                         
-                        print(f"✅ Selected subject: {subject}")
-                        dropdown_found = True
+                        dropdown.send_keys(Keys.ENTER)
+                        print(f"✅ Selected subject (backup method): {subject}")
                         break
-                except Exception:
-                    continue
-                    
-            if not dropdown_found:
-                # Fallback - try any empty dropdown
-                try:
-                    dropdowns = driver.find_elements(By.CSS_SELECTOR, ".react-select__input input")
-                    for dropdown in dropdowns:
-                        if not dropdown.get_attribute("value"):
-                            dropdown.clear()
-                            dropdown.send_keys(subject)
-                            
-                            # Wait for dropdown options
-                            WebDriverWait(driver, 2).until(
-                                lambda d: len(d.find_elements(By.CSS_SELECTOR, ".react-select__menu")) > 0
-                            )
-                            
-                            dropdown.send_keys(Keys.ENTER)
-                            print(f"✅ Selected subject (backup method): {subject}")
-                            break
-                except Exception as e:
-                    print(f"❌ Failed to select subject: {e}")
+            except Exception as e:
+                print(f"❌ Failed to select subject: {e}")
+        
+        # Find level and grade fields in the most recently added container
+        containers = driver.find_elements(By.CSS_SELECTOR, ".user-field")
+        newest_container = containers[-1] if containers else None
+        
+        if newest_container:
+            # Find level and grade inputs in the container
+            inputs = newest_container.find_elements(By.CSS_SELECTOR, "input.simple-input")
             
-            # Find level and grade fields in the most recently added container
-            containers = driver.find_elements(By.CSS_SELECTOR, ".user-field")
-            newest_container = containers[-1] if containers else None
+            if len(inputs) >= 1:
+                level_input = inputs[0]
+                level_input.clear()
+                level_input.send_keys(str(level))
+                print(f"✅ Entered units: {level}")
             
-            if newest_container:
-                # Find level and grade inputs in the container
-                inputs = newest_container.find_elements(By.CSS_SELECTOR, "input.simple-input")
-                
-                if len(inputs) >= 1:
-                    level_input = inputs[0]
-                    level_input.clear()
-                    level_input.send_keys(str(level))
-                    print(f"✅ Entered units: {level}")
-                
-                if len(inputs) >= 2:
-                    grade_input = inputs[1]
-                    grade_input.clear()
-                    grade_input.send_keys(str(grade))
-                    print(f"✅ Entered grade: {grade}")
-            
-            print(f"✅ Completed processing subject: {subject}")
-            
-            # Wait for page to register changes
-            driver.implicitly_wait(2)
-            
-        except Exception as e:
-            print(f"❌ Error processing subject {subject}: {e}")
+            if len(inputs) >= 2:
+                grade_input = inputs[1]
+                grade_input.clear()
+                grade_input.send_keys(str(grade))
+                print(f"✅ Entered grade: {grade}")
+        
+        print(f"✅ Completed processing subject: {subject}")
+        
+        # Wait for page to register changes
+        driver.implicitly_wait(2)
+
 
     def _fill_input_by_id(self, driver, input_id, value, field_name):
         """Helper to fill an input field by ID with error handling."""
@@ -808,27 +666,24 @@ class BenGurionUniversity:
         
         # Need to click twice to reach psychometric page
         for i in range(2):
-            try:
-                next_button = self._find_element_with_retry(driver, wait, [
-                    (By.CSS_SELECTOR, "a.page-link.short-link.next-link"),
-                    (By.XPATH, "//a[contains(@class, 'next-link')]"),
-                    (By.XPATH, "//a[contains(@class, 'page-link') and .//span[text()='הבא']]")
-                ])
+            next_button = self._find_element_with_retry(driver, wait, [
+                (By.CSS_SELECTOR, "a.page-link.short-link.next-link"),
+                (By.XPATH, "//a[contains(@class, 'next-link')]"),
+                (By.XPATH, "//a[contains(@class, 'page-link') and .//span[text()='הבא']]")
+            ])
+            
+            if next_button:
+                self._safe_click(driver, next_button, f"'Next' button ({i+1}/2)")
                 
-                if next_button:
-                    self._safe_click(driver, next_button, f"'Next' button ({i+1}/2)")
-                    
-                    # Wait for page transition
-                    WebDriverWait(driver, 3).until(
-                        lambda d: d.execute_script("return document.readyState") == "complete"
-                    )
-                    
-                    print(f"✅ Clicked 'Next' button ({i+1}/2)")
-                else:
-                    print(f"❌ Could not find 'Next' button ({i+1}/2)")
-                    
-            except Exception as e:
-                print(f"❌ Failed to click 'Next' button: {e}")
+                # Wait for page transition
+                WebDriverWait(driver, 3).until(
+                    lambda d: d.execute_script("return document.readyState") == "complete"
+                )
+                
+                print(f"✅ Clicked 'Next' button ({i+1}/2)")
+            else:
+                print(f"❌ Could not find 'Next' button ({i+1}/2)")
+
         
         print("\n📝 Now on psychometric score page")
         
@@ -870,44 +725,41 @@ class BenGurionUniversity:
         
         # Process each field
         for field in psychometry_fields:
+            # Try to get the field label
+            label_element = None
             try:
-                # Try to get the field label
-                label_element = None
-                try:
-                    label_element = field.find_element(By.TAG_NAME, "div")
-                except:
-                    pass
+                label_element = field.find_element(By.TAG_NAME, "div")
+            except:
+                pass
+            
+            field_label = ""
+            if label_element and label_element.text:
+                field_label = label_element.text.strip()
+            
+            # Look for the input element
+            input_element = field.find_element(By.CSS_SELECTOR, "input.simple-input")
+            
+            # Determine which field this is based on label
+            score_value = None
+            field_name = None
+            
+            for key, value in field_map.items():
+                if key in field_label or (not field_label and not entered_scores[key]):
+                    score_value = value
+                    field_name = key
+                    entered_scores[key] = True
+                    break
+            
+            if score_value is not None:
+                driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", input_element)
                 
-                field_label = ""
-                if label_element and label_element.text:
-                    field_label = label_element.text.strip()
+                # Wait for element to be in view and stable
+                self._wait_for_element_stable(driver, input_element)
                 
-                # Look for the input element
-                input_element = field.find_element(By.CSS_SELECTOR, "input.simple-input")
-                
-                # Determine which field this is based on label
-                score_value = None
-                field_name = None
-                
-                for key, value in field_map.items():
-                    if key in field_label or (not field_label and not entered_scores[key]):
-                        score_value = value
-                        field_name = key
-                        entered_scores[key] = True
-                        break
-                
-                if score_value is not None:
-                    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", input_element)
-                    
-                    # Wait for element to be in view and stable
-                    self._wait_for_element_stable(driver, input_element)
-                    
-                    input_element.clear()
-                    input_element.send_keys(str(score_value))
-                    print(f"✅ Entered {field_name} score: {score_value}")
-                    
-            except Exception as e:
-                print(f"❌ Error processing psychometric field: {e}")
+                input_element.clear()
+                input_element.send_keys(str(score_value))
+                print(f"✅ Entered {field_name} score: {score_value}")
+
         
         # Check if we missed any fields and use alternative methods
         missed_fields = [key for key, value in entered_scores.items() if not value]
@@ -968,10 +820,11 @@ class BenGurionUniversity:
         # Enhanced approach - try multiple strategies to navigate forward
         for target in next_button_targets:
             print(f"🔄 Looking for {target['name']} 'Next' button ({target['href']})...")
+            time.sleep(1)
             success = False
             
             # Give a short delay between navigation attempts
-            driver.implicitly_wait(3)
+            driver.implicitly_wait(10)
             
             # Try all possible ways to find and click the next button
             strategies = [
@@ -1106,6 +959,7 @@ class BenGurionUniversity:
             ])
             
             if acceptance_button:
+                time.sleep(1)
                 self._safe_click(driver, acceptance_button, "acceptance list button")
                 print("✅ Clicked on acceptance list button")
                 
@@ -1114,7 +968,7 @@ class BenGurionUniversity:
                     lambda d: d.execute_script("return document.readyState") == "complete"
                 )
             else:
-                return {"error": "Could not navigate to acceptance list page"}
+                Exception("Could not find acceptance list button")
             
             # Wait for the list to load
             WebDriverWait(driver, 3).until(
