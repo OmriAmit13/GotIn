@@ -379,7 +379,8 @@ class TechnionUniversity():
                 # Check if the row contains the target degree
                 if technion_degree in cells[0].text:
                     # Extract the סכם נדרש לקבלה value from the corresponding cell
-                    required_sum = float(cells[2].text)
+                    cleaned_text = re.sub(r'[\*\s]+', '', cells[1].text)
+                    required_sum = float(cleaned_text)
                     print(f"Degree: {technion_degree}")
                     time.sleep(1)
                     found = True
@@ -395,7 +396,8 @@ class TechnionUniversity():
             if not found:        
                 print(f"Degree '{technion_degree}' not found in the table.")
                 driver.quit()
-                return None, f"תואר {requested_degree} לא קיים בטכניון"                
+                return None, f"תואר {requested_degree} לא קיים בטכניון"
+                
         except Exception as e:
             print(f"Error checking acceptance: {e}")
             driver.quit()

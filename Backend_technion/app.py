@@ -13,12 +13,19 @@ CORS(app)
 
 ### general variables ###
 chrome_options = Options()
-chrome_options.add_argument("--headless")
+#chrome_options.add_argument("--headless")
+chrome_options.add_argument("--autoplay-policy=user-gesture-required")
+chrome_options.add_argument("--mute-audio")
+chrome_options.add_experimental_option("prefs", {
+    "media.autoplay.enabled": False,
+    "media.autoplay.allow-extension-media": False,
+})
 service = Service(ChromeDriverManager().install())
 
 # Route for Technion University analysis
 @app.route('/Technion', methods=['POST'])
 def technion_handler():
+    ### initialize the university classes ###
     technion_university = TechnionUniversity(service, chrome_options)
     try:
         request_data = request.get_json()
@@ -47,4 +54,4 @@ if __name__ == '__main__':
     if len(sys.argv) > 1:
         port = int(sys.argv[1])
     
-    app.run(host='0.0.0.0', port=port, debug=True)
+    app.run(host='0.0.0.0', port=port)
