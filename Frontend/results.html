@@ -37,28 +37,15 @@
                     throw new Error('No submission data found');
                 }
 
-                // Get list of desired universities
-                const selectedUniversities = transformedData.universities;
-                delete transformedData.universities;
-
-                const servers = [
-                    {url: 'http://127.0.0.1:3004/BenGurion', university: 'אוניברסיטת בן גוריון'},
-                    {url: 'http://127.0.0.1:3003/TelAviv', university: 'אוניברסיטת תל אביב'},
-                    {url: 'http://127.0.0.1:3002/HebrewUniversity', university: 'האוניברסיטה העברית'},
-                    {url: 'http://127.0.0.1:3001/Technion', university: 'טכניון'},
-                ];
-
-                // Filter relevant servers
-                const relevantServers = servers.filter(server => 
-                    selectedUniversities.includes(server.university)
-                );
-
                 // Check for submission error first
                 const submissionError = localStorage.getItem('submissionError');
                 if (submissionError) {
                     localStorage.removeItem('submissionError');
                     throw new Error(submissionError);
                 }
+
+                // Get list of desired universities and create a copy
+                const selectedUniversities = [...transformedData.universities];
 
                 // Clear any previous results
                 resultsContainer.innerHTML = '';
@@ -72,7 +59,7 @@
                     loadingItem.innerHTML = `
                         <h3>${university}</h3>
                         <div class="loading-content">
-                            <p class="loading-text">מחשב תוצאות...</p>
+                            <p class="loading-text">מחכה לתשובה...</p>
                             <div class="spinner"></div>
                             <div class="progress-bar"></div>
                         </div>
@@ -83,6 +70,21 @@
 
                 // Store pending universities for tracking progress
                 localStorage.setItem('pendingUniversities', JSON.stringify(selectedUniversities));
+
+                const servers = [
+                    {url: 'http://127.0.0.1:3004/BenGurion', university: 'אוניברסיטת בן גוריון'},
+                    {url: 'http://127.0.0.1:3003/TelAviv', university: 'אוניברסיטת תל אביב'},
+                    {url: 'http://127.0.0.1:3002/HebrewUniversity', university: 'האוניברסיטה העברית'},
+                    {url: 'http://127.0.0.1:3001/Technion', university: 'טכניון'},
+                ];
+
+                // Filter relevant servers
+                const relevantServers = servers.filter(server => 
+                    selectedUniversities.includes(server.university)
+                );
+
+                // Remove universities from request data after filtering
+                delete transformedData.universities;
 
                 // Function to display a single university result
                 function displayUniversityResult(resultData) {
