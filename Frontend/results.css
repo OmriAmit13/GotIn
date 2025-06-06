@@ -157,6 +157,31 @@ body {
     margin-right: 10px;
 }
 
+/* University loading styles */
+.result-item.loading {
+    position: relative;
+    opacity: 0.8;
+    transition: opacity 0.3s;
+}
+
+.result-item.loading .loading-text {
+    color: var(--primary-color);
+    font-weight: 500;
+    margin: 10px 0;
+    text-align: center;
+}
+
+.result-item.loading .spinner {
+    display: block;
+    width: 30px;
+    height: 30px;
+    margin: 15px auto;
+    border: 3px solid var(--border-color);
+    border-top: 3px solid var(--primary-color);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }

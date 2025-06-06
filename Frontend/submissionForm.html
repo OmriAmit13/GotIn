@@ -450,9 +450,10 @@
                 universities: selectedUniversities
             };
             
-            // Store the form data and redirect to loading page
+            // Store the form data and redirect to results page
             localStorage.setItem('submissionData', JSON.stringify(transformedData));
-            window.location.href = 'loading.html';
+            localStorage.setItem('pendingUniversities', JSON.stringify(selectedUniversities));
+            window.location.href = 'results.html';
         }
 
         // Add input event listeners to update progress bar when fields are filled

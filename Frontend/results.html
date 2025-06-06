@@ -20,7 +20,7 @@
 
     <!-- <script src="test.js"></script> -->
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', async function() {
             const loading = document.getElementById('loading');
             const error = document.getElementById('error');
             const results = document.getElementById('results');
@@ -31,6 +31,34 @@
             error.style.display = 'none';
 
             try {
+                // Get form data
+                const transformedData = JSON.parse(localStorage.getItem('submissionData'));
+                if (!transformedData) {
+                    throw new Error('No submission data found');
+                }
+
+                // Get list of desired universities
+                const selectedUniversities = transformedData.universities;
+                delete transformedData.universities;
+
+                const servers = [
+                    {url: 'http://127.0.0.1:3004/BenGurion', university: 'אוניברסיטת בן גוריון'},
+                    {url: 'http://127.0.0.1:3003/TelAviv', university: 'אוניברסיטת תל אביב'},
+                    {url: 'http://127.0.0.1:3002/HebrewUniversity', university: 'האוניברסיטה העברית'},
+                    {url: 'http://127.0.0.1:3001/Technion', university: 'טכניון'},
+                ];
+
+                // Filter relevant servers
+                const relevantServers = servers.filter(server => 
+                    selectedUniversities.includes(server.university)
+                );
+
+                // Store pending universities for tracking progress
+                localStorage.setItem('pendingUniversities', JSON.stringify(selectedUniversities));
+                
+                // Clear any previous results
+                resultsContainer.innerHTML = '';
+                
                 // Check for submission error first
                 const submissionError = localStorage.getItem('submissionError');
                 if (submissionError) {
@@ -38,8 +66,28 @@
                     throw new Error(submissionError);
                 }
 
-                // Get pending universities
-                const pendingUniversities = JSON.parse(localStorage.getItem('pendingUniversities')) || [];
+                // Show initial loading state for all universities
+                selectedUniversities.forEach(university => {
+                    const loadingItem = document.createElement('div');
+                    loadingItem.className = 'result-item loading';
+                    loadingItem.setAttribute('data-university', university);
+                    
+                    const header = document.createElement('h3');
+                    header.textContent = university;
+                    
+                    const loadingText = document.createElement('p');
+                    loadingText.className = 'loading-text';
+                    loadingText.textContent = 'מחכה לתשובה...';
+                    
+                    const spinner = document.createElement('div');
+                    spinner.className = 'spinner';
+                    
+                    loadingItem.appendChild(header);
+                    loadingItem.appendChild(loadingText);
+                    loadingItem.appendChild(spinner);
+                    
+                    resultsContainer.appendChild(loadingItem);
+                });
 
                 // Function to display a single university result
                 function displayUniversityResult(resultData) {
@@ -104,70 +152,55 @@
                     }
                 }
 
-                // Function to display loading state for pending universities
-                function displayPendingUniversities() {
-                    pendingUniversities.forEach(university => {
-                        const existingResult = resultsContainer.querySelector(
-                            `[data-university="${university}"]`
-                        );
-                        
-                        if (!existingResult) {
-                            const loadingItem = document.createElement('div');
-                            loadingItem.className = 'result-item loading';
-                            loadingItem.setAttribute('data-university', university);
-                            
-                            const header = document.createElement('h3');
-                            header.textContent = university;
-                            
-                            const loadingText = document.createElement('p');
-                            loadingText.textContent = 'טוען תוצאות...';
-                            
-                            loadingItem.appendChild(header);
-                            loadingItem.appendChild(loadingText);
-                            
-                            resultsContainer.appendChild(loadingItem);
-                        }
-                    });
-                }
+                // Handle each university request separately
+                relevantServers.forEach(async server => {
+                    try {
+                        const response = await fetch(server.url, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(transformedData)
+                        });
 
-                // Initial display of results and loading states
-                displayPendingUniversities();
-                
-                // Check for existing results
-                for (let i = 0; i < localStorage.length; i++) {
-                    const key = localStorage.key(i);
-                    if (key.startsWith('result_')) {
-                        const resultData = JSON.parse(localStorage.getItem(key));
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+
+                        const result = await response.json();
+                        const resultData = {
+                            university: server.university,
+                            status: 'success',
+                            data: result
+                        };
+
+                        // Display the result
                         displayUniversityResult(resultData);
-                    }
-                }
 
-                // Poll for new results
-                const pollInterval = setInterval(() => {
-                    const currentPending = JSON.parse(localStorage.getItem('pendingUniversities')) || [];
-                    
-                    // Check for new results
-                    for (let i = 0; i < localStorage.length; i++) {
-                        const key = localStorage.key(i);
-                        if (key.startsWith('result_')) {
-                            const resultData = JSON.parse(localStorage.getItem(key));
-                            displayUniversityResult(resultData);
+                        // Update pending universities
+                        const pendingUniversities = JSON.parse(localStorage.getItem('pendingUniversities'));
+                        const updatedPending = pendingUniversities.filter(uni => uni !== server.university);
+                        localStorage.setItem('pendingUniversities', JSON.stringify(updatedPending));
+
+                        // Clean up if this was the last response
+                        if (updatedPending.length === 0) {
+                            localStorage.removeItem('submissionData');
+                            localStorage.removeItem('pendingUniversities');
                         }
+                    } catch (error) {
+                        const errorData = {
+                            university: server.university,
+                            status: 'error',
+                            error: error.message
+                        };
+                        displayUniversityResult(errorData);
+
+                        // Update pending universities even on error
+                        const pendingUniversities = JSON.parse(localStorage.getItem('pendingUniversities'));
+                        const updatedPending = pendingUniversities.filter(uni => uni !== server.university);
+                        localStorage.setItem('pendingUniversities', JSON.stringify(updatedPending));
                     }
-                    
-                    // If no more pending universities, stop polling and clean up
-                    if (currentPending.length === 0) {
-                        clearInterval(pollInterval);
-                        // Clean up localStorage
-                        for (let i = localStorage.length - 1; i >= 0; i--) {
-                            const key = localStorage.key(i);
-                            if (key.startsWith('result_')) {
-                                localStorage.removeItem(key);
-                            }
-                        }
-                        localStorage.removeItem('pendingUniversities');
-                    }
-                }, 1000);
+                });
 
             } catch (err) {
                 loading.style.display = 'none';
