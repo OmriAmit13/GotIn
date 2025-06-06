@@ -45,25 +45,36 @@
                 }
 
                 // Get list of desired universities and create a copy
-                const selectedUniversities = [...transformedData.universities];
-
-                // Clear any previous results
-                resultsContainer.innerHTML = '';
+                const selectedUniversities = transformedData.universities;
+                delete transformedData.universities;
 
                 // Show initial loading state for all universities
                 selectedUniversities.forEach(university => {
                     const loadingItem = document.createElement('div');
                     loadingItem.className = 'result-item loading';
                     loadingItem.setAttribute('data-university', university);
+
+                    const header = document.createElement('h3');
+                    header.textContent = university;
+                    loadingItem.appendChild(header);
+
+                    const loadingMsg = document.createElement('p');
+                    loadingMsg.className = 'loading-text';
+                    loadingMsg.textContent = "מחכה לתשובה...";
+                    loadingItem.appendChild(loadingMsg);
+
+                    const spinner = document.createElement('div');
+                    spinner.className = 'spinner';
+                    loadingItem.appendChild(spinner);
                     
-                    loadingItem.innerHTML = `
-                        <h3>${university}</h3>
-                        <div class="loading-content">
-                            <p class="loading-text">מחכה לתשובה...</p>
-                            <div class="spinner"></div>
-                            <div class="progress-bar"></div>
-                        </div>
-                    `;
+                    // loadingItem.innerHTML = `
+                    //     <h3>${university}</h3>
+                    //     <div class="loading-content">
+                    //         <p class="loading-text">מחכה לתשובה...</p>
+                    //         <div class="spinner"></div>
+                    //         <div class="progress-bar"></div>
+                    //     </div>
+                    // `;
                     
                     resultsContainer.appendChild(loadingItem);
                 });
@@ -82,9 +93,6 @@
                 const relevantServers = servers.filter(server => 
                     selectedUniversities.includes(server.university)
                 );
-
-                // Remove universities from request data after filtering
-                delete transformedData.universities;
 
                 // Function to display a single university result
                 function displayUniversityResult(resultData) {
