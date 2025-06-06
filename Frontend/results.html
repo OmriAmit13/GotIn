@@ -109,12 +109,14 @@
                                     
                                     if (value === 'קבלה') {
                                         resultItem.classList.add('kabala');
+                                        resultItem.appendChild(p);
                                     } else if (value === 'דחייה') {
                                         resultItem.classList.add('dkhiya');
+                                        resultItem.appendChild(p);
                                     } else if (value === 'רשימת המתנה') {
                                         resultItem.classList.add('waiting');
+                                        resultItem.appendChild(p);
                                     }
-                                    resultItem.appendChild(p);
                                 } else if (key === 'message' && value && value.trim() !== '') {
                                     const p = document.createElement('p');
                                     p.textContent = value;
