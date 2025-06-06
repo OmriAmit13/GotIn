@@ -26,8 +26,8 @@
             const results = document.getElementById('results');
             const resultsContainer = document.getElementById('resultsContainer');
 
-            loading.style.display = 'block';
-            results.style.display = 'none';
+            loading.style.display = 'none';
+            results.style.display = 'block';
             error.style.display = 'none';
 
             try {
@@ -38,30 +38,22 @@
                     throw new Error(submissionError);
                 }
 
-                const resultData = JSON.parse(localStorage.getItem('resultData'));
-                if (!resultData) {
-                    throw new Error('No data found');
-                }
+                // Get pending universities
+                const pendingUniversities = JSON.parse(localStorage.getItem('pendingUniversities')) || [];
 
-                // Clear any previous results and localStorage
-                resultsContainer.innerHTML = '';
-                localStorage.removeItem('resultData');
-
-                // Display the results from each server
-                resultData.forEach(serverResult => {
+                // Function to display a single university result
+                function displayUniversityResult(resultData) {
                     const resultItem = document.createElement('div');
-                    resultItem.className = `result-item ${serverResult.status}`;
+                    resultItem.className = `result-item ${resultData.status}`;
+                    resultItem.setAttribute('data-university', resultData.university);
                     
-                    // Create server header
                     const serverHeader = document.createElement('h3');
-                    serverHeader.textContent = `${serverResult.university}`;
+                    serverHeader.textContent = resultData.university;
                     resultItem.appendChild(serverHeader);
 
-                    if (serverResult.status === 'success') {
-                        // Display successful response data
-                        if (typeof serverResult.data === 'object') {
-                            Object.entries(serverResult.data).forEach(([key, value]) => {
-                                // Handle URL
+                    if (resultData.status === 'success') {
+                        if (typeof resultData.data === 'object') {
+                            Object.entries(resultData.data).forEach(([key, value]) => {
                                 if (key === 'url') {
                                     const p = document.createElement('p');
                                     p.textContent = "למידע נוסף: ";
@@ -71,26 +63,19 @@
                                     link.textContent = value;
                                     p.appendChild(link);
                                     resultItem.appendChild(p);
-                                }
-                                // Handle acceptance status
-                                else if (key === 'isAccepted') {
+                                } else if (key === 'isAccepted') {
                                     const p = document.createElement('p');
                                     p.innerHTML = `<strong>${value}</strong>`;
                                     
-                                    // Add color class based on status
                                     if (value === 'קבלה') {
                                         resultItem.classList.add('kabala');
-                                        resultItem.appendChild(p);
                                     } else if (value === 'דחייה') {
                                         resultItem.classList.add('dkhiya');
-                                        resultItem.appendChild(p);
                                     } else if (value === 'רשימת המתנה') {
                                         resultItem.classList.add('waiting');
-                                        resultItem.appendChild(p);
                                     }
-                                }
-                                // Handle message
-                                else if (key === 'message' && value && value.trim() !== '') {
+                                    resultItem.appendChild(p);
+                                } else if (key === 'message' && value && value.trim() !== '') {
                                     const p = document.createElement('p');
                                     p.textContent = value;
                                     resultItem.appendChild(p);
@@ -98,22 +83,92 @@
                             });
                         } else {
                             const p = document.createElement('p');
-                            p.textContent = serverResult.data;
+                            p.textContent = resultData.data;
                             resultItem.appendChild(p);
                         }
                     } else {
-                        // Display error message in Hebrew
                         const errorMsg = document.createElement('p');
                         errorMsg.className = 'error-message';
                         errorMsg.textContent = "תקלה בהבאת הנתונים - אנא נסו שנית";
                         resultItem.appendChild(errorMsg);
                     }
 
-                    resultsContainer.appendChild(resultItem);
-                });
+                    // Find existing result for this university or append new one
+                    const existingResult = resultsContainer.querySelector(
+                        `[data-university="${resultData.university}"]`
+                    );
+                    if (existingResult) {
+                        resultsContainer.replaceChild(resultItem, existingResult);
+                    } else {
+                        resultsContainer.appendChild(resultItem);
+                    }
+                }
 
-                loading.style.display = 'none';
-                results.style.display = 'block';
+                // Function to display loading state for pending universities
+                function displayPendingUniversities() {
+                    pendingUniversities.forEach(university => {
+                        const existingResult = resultsContainer.querySelector(
+                            `[data-university="${university}"]`
+                        );
+                        
+                        if (!existingResult) {
+                            const loadingItem = document.createElement('div');
+                            loadingItem.className = 'result-item loading';
+                            loadingItem.setAttribute('data-university', university);
+                            
+                            const header = document.createElement('h3');
+                            header.textContent = university;
+                            
+                            const loadingText = document.createElement('p');
+                            loadingText.textContent = 'טוען תוצאות...';
+                            
+                            loadingItem.appendChild(header);
+                            loadingItem.appendChild(loadingText);
+                            
+                            resultsContainer.appendChild(loadingItem);
+                        }
+                    });
+                }
+
+                // Initial display of results and loading states
+                displayPendingUniversities();
+                
+                // Check for existing results
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key.startsWith('result_')) {
+                        const resultData = JSON.parse(localStorage.getItem(key));
+                        displayUniversityResult(resultData);
+                    }
+                }
+
+                // Poll for new results
+                const pollInterval = setInterval(() => {
+                    const currentPending = JSON.parse(localStorage.getItem('pendingUniversities')) || [];
+                    
+                    // Check for new results
+                    for (let i = 0; i < localStorage.length; i++) {
+                        const key = localStorage.key(i);
+                        if (key.startsWith('result_')) {
+                            const resultData = JSON.parse(localStorage.getItem(key));
+                            displayUniversityResult(resultData);
+                        }
+                    }
+                    
+                    // If no more pending universities, stop polling and clean up
+                    if (currentPending.length === 0) {
+                        clearInterval(pollInterval);
+                        // Clean up localStorage
+                        for (let i = localStorage.length - 1; i >= 0; i--) {
+                            const key = localStorage.key(i);
+                            if (key.startsWith('result_')) {
+                                localStorage.removeItem(key);
+                            }
+                        }
+                        localStorage.removeItem('pendingUniversities');
+                    }
+                }, 1000);
+
             } catch (err) {
                 loading.style.display = 'none';
                 error.style.display = 'block';

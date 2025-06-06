@@ -6,8 +6,7 @@
   <link rel="stylesheet" href="loading.css">
 </head>
 <body>
-  <div class="spinner"></div>
-  <div class="text">בודקים את הנתונים שלך...</div>
+  <div id="universities-loading"></div>
 
   <script>
     document.addEventListener('DOMContentLoaded', async function() {
@@ -18,9 +17,12 @@
           throw new Error('No submission data found');
         }
 
-        // get the list of desired universities
+        // Get selected universities and initialize tracking
         const selectedUniversities = transformedData.universities;
         delete transformedData.universities;
+        
+        // Store pending universities for tracking progress
+        localStorage.setItem('pendingUniversities', JSON.stringify(selectedUniversities));
 
         const servers = [
           {url: 'http://127.0.0.1:3004/BenGurion', university: 'אוניברסיטת בן גוריון'},
@@ -29,12 +31,27 @@
           {url: 'http://127.0.0.1:3001/Technion', university: 'טכניון'},
         ];
 
-        // Filter servers based on selected universities
+        // Filter relevant servers
         const relevantServers = servers.filter(server => 
           selectedUniversities.includes(server.university)
         );
 
-        const promises = relevantServers.map(async server => {
+        // Create loading indicators for each university
+        const loadingContainer = document.getElementById('universities-loading');
+        relevantServers.forEach(server => {
+          const uniLoader = document.createElement('div');
+          uniLoader.className = 'university-loader';
+          uniLoader.innerHTML = `
+            <div class="spinner"></div>
+            <div class="text">מחכה לתשובה מ${server.university}...</div>
+          `;
+          loadingContainer.appendChild(uniLoader);
+        });
+
+        let hasRedirected = false;
+
+        // Handle each university separately
+        relevantServers.forEach(async server => {
           try {
             const response = await fetch(server.url, {
               method: 'POST',
@@ -49,32 +66,45 @@
             }
 
             const result = await response.json();
-            return {
+            const resultData = {
               university: server.university,
               status: 'success',
               data: result
             };
+
+            // Store result for this university
+            localStorage.setItem(`result_${server.university}`, JSON.stringify(resultData));
+            
+            // Update pending universities
+            const pendingUniversities = JSON.parse(localStorage.getItem('pendingUniversities'));
+            const updatedPending = pendingUniversities.filter(uni => uni !== server.university);
+            localStorage.setItem('pendingUniversities', JSON.stringify(updatedPending));
+
+            // Redirect to results page if this is the first response
+            if (!hasRedirected) {
+              hasRedirected = true;
+              window.location.href = 'results.html';
+            }
           } catch (error) {
-            return {
+            const errorData = {
               university: server.university,
               status: 'error',
-              error: error.message,
-              stackTrace: error.stack
+              error: error.message
             };
+            localStorage.setItem(`result_${server.university}`, JSON.stringify(errorData));
+
+            // Update pending universities even on error
+            const pendingUniversities = JSON.parse(localStorage.getItem('pendingUniversities'));
+            const updatedPending = pendingUniversities.filter(uni => uni !== server.university);
+            localStorage.setItem('pendingUniversities', JSON.stringify(updatedPending));
+
+            if (!hasRedirected) {
+              hasRedirected = true;
+              window.location.href = 'results.html';
+            }
           }
         });
-
-        const results = await Promise.all(promises);
-        console.log('Results from all servers:', results);
-        
-        // Clear submission data and store results
-        localStorage.removeItem('submissionData');
-        localStorage.setItem('resultData', JSON.stringify(results));
-        
-        // Redirect to results page
-        window.location.href = 'results.html';
       } catch (error) {
-        // Store the error and redirect to results page
         localStorage.setItem('submissionError', error.message);
         window.location.href = 'results.html';
       }
