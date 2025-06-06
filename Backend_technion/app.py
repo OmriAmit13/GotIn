@@ -7,6 +7,7 @@ from technion_scraper import TechnionUniversity
 import sys
 import traceback
 import logging
+import json
 
 app = Flask(__name__)
 CORS(app)
@@ -45,13 +46,10 @@ def technion_handler():
 
 ### main function ###
 if __name__ == '__main__':
-    import sys
-    
-    # Default port
-    port = 3001
-    
-    # Check if port is provided as command line argument
-    if len(sys.argv) > 1:
-        port = int(sys.argv[1])
-    
-    app.run(host='0.0.0.0', port=port)
+    try:
+        with open('../config.json', 'r') as f:
+            config = json.load(f)
+            app.run(host='0.0.0.0', port=config['ports']['technion']) 
+    except Exception as e:
+        print(f"Error loading config: {str(e)}")
+        app.run(host='0.0.0.0', port=3003)

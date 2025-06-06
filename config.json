@@ -1,0 +1,8 @@
+{
+  "ports": {
+    "hebrew_university": 3002,
+    "technion": 3003,
+    "bgu": 3001,
+    "tel_aviv": 3004
+  }
+}

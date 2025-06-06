@@ -42,4 +42,10 @@ def hebrew_handler():
 
 ### main function ###
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=3002)
+    try:
+        with open('../config.json', 'r') as f:
+            config = json.load(f)
+            app.run(host='0.0.0.0', port=config['ports']['hebrew_university']) 
+    except Exception as e:
+        print(f"Error loading config: {str(e)}")
+        app.run(host='0.0.0.0', port=3002)

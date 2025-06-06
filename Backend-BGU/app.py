@@ -5,6 +5,7 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from webdriver_manager.chrome import ChromeDriverManager
 from BenGurionUniversity import BenGurionUniversity
+import json
 
 app = Flask(__name__, static_folder=os.path.dirname(os.path.abspath(__file__)))
 CORS(app)  # Enable CORS for all routes in the application
@@ -28,5 +29,10 @@ def ben_gurion_handler():
 
 ### main function ###
 if __name__ == '__main__':
-    # Using port 5001 to match frontend expectations
-    app.run(host='0.0.0.0', port=3004)
+    try:
+        with open('../config.json', 'r') as f:
+            config = json.load(f)
+            app.run(host='0.0.0.0', port=config['ports']['bgu']) 
+    except Exception as e:
+        print(f"Error loading config: {str(e)}")
+        app.run(host='0.0.0.0', port=3001)

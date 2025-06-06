@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>תוצאות התאמה</title>
     <link rel="stylesheet" href="results.css">
+    <script src="config.js"></script>
 </head>
 <body>
     <h1 class="site-title">GotIn</h1>
@@ -69,11 +70,14 @@
                 // Store pending universities for tracking progress
                 localStorage.setItem('pendingUniversities', JSON.stringify(selectedUniversities));
 
+                // Load configuration
+                const config = await loadConfig();
+                
                 const servers = [
-                    {url: 'http://127.0.0.1:3004/BenGurion', university: 'אוניברסיטת בן גוריון'},
-                    {url: 'http://127.0.0.1:3003/TelAviv', university: 'אוניברסיטת תל אביב'},
-                    {url: 'http://127.0.0.1:3002/HebrewUniversity', university: 'האוניברסיטה העברית'},
-                    {url: 'http://127.0.0.1:3001/Technion', university: 'טכניון'},
+                    {url: `http://127.0.0.1:${config.ports.bgu}/BenGurion`, university: 'אוניברסיטת בן גוריון'},
+                    {url: `http://127.0.0.1:${config.ports.tel_aviv}/TelAviv`, university: 'אוניברסיטת תל אביב'},
+                    {url: `http://127.0.0.1:${config.ports.hebrew_university}/HebrewUniversity`, university: 'האוניברסיטה העברית'},
+                    {url: `http://127.0.0.1:${config.ports.technion}/Technion`, university: 'טכניון'},
                 ];
 
                 // Filter relevant servers
