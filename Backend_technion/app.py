@@ -13,7 +13,7 @@ CORS(app)
 
 ### general variables ###
 chrome_options = Options()
-#chrome_options.add_argument("--headless")
+chrome_options.add_argument("--headless")
 chrome_options.add_argument("--autoplay-policy=user-gesture-required")
 chrome_options.add_argument("--mute-audio")
 chrome_options.add_experimental_option("prefs", {
