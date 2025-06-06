@@ -53,12 +53,6 @@
                     selectedUniversities.includes(server.university)
                 );
 
-                // Store pending universities for tracking progress
-                localStorage.setItem('pendingUniversities', JSON.stringify(selectedUniversities));
-                
-                // Clear any previous results
-                resultsContainer.innerHTML = '';
-                
                 // Check for submission error first
                 const submissionError = localStorage.getItem('submissionError');
                 if (submissionError) {
@@ -66,28 +60,29 @@
                     throw new Error(submissionError);
                 }
 
+                // Clear any previous results
+                resultsContainer.innerHTML = '';
+
                 // Show initial loading state for all universities
                 selectedUniversities.forEach(university => {
                     const loadingItem = document.createElement('div');
                     loadingItem.className = 'result-item loading';
                     loadingItem.setAttribute('data-university', university);
                     
-                    const header = document.createElement('h3');
-                    header.textContent = university;
-                    
-                    const loadingText = document.createElement('p');
-                    loadingText.className = 'loading-text';
-                    loadingText.textContent = 'מחכה לתשובה...';
-                    
-                    const spinner = document.createElement('div');
-                    spinner.className = 'spinner';
-                    
-                    loadingItem.appendChild(header);
-                    loadingItem.appendChild(loadingText);
-                    loadingItem.appendChild(spinner);
+                    loadingItem.innerHTML = `
+                        <h3>${university}</h3>
+                        <div class="loading-content">
+                            <p class="loading-text">מחשב תוצאות...</p>
+                            <div class="spinner"></div>
+                            <div class="progress-bar"></div>
+                        </div>
+                    `;
                     
                     resultsContainer.appendChild(loadingItem);
                 });
+
+                // Store pending universities for tracking progress
+                localStorage.setItem('pendingUniversities', JSON.stringify(selectedUniversities));
 
                 // Function to display a single university result
                 function displayUniversityResult(resultData) {
