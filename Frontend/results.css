@@ -162,6 +162,7 @@ body {
     position: relative;
     opacity: 0.8;
     transition: opacity 0.3s;
+    display: block !important;
 }
 
 .result-item.loading .loading-content {

@@ -44,28 +44,9 @@
                     throw new Error(submissionError);
                 }
 
-                // Get list of desired universities and create a copy
+                // Get list of desired universities
                 const selectedUniversities = transformedData.universities;
                 delete transformedData.universities;
-
-                const _loadingItem = document.createElement('div');
-                _loadingItem.className = 'result-item loading';
-                _loadingItem.setAttribute('data-university', "סתם חרטא");
-
-                const _header = document.createElement('h3');
-                _header.textContent = "סתם חרטא";
-                _loadingItem.appendChild(_header);
-
-                const _loadingMsg = document.createElement('p');
-                _loadingMsg.className = 'loading-text';
-                _loadingMsg.textContent = "מחכה לתשובה...";
-                _loadingItem.appendChild(_loadingMsg);
-
-                const _spinner = document.createElement('div');
-                _spinner.className = 'spinner';
-                _loadingItem.appendChild(_spinner);
-                
-                resultsContainer.appendChild(_loadingItem);
 
                 // Show initial loading state for all universities
                 selectedUniversities.forEach(university => {
