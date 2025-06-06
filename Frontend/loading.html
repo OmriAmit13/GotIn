@@ -18,6 +18,10 @@
           throw new Error('No submission data found');
         }
 
+        // get the list of desired universities
+        const selectedUniversities = transformedData.universities;
+        delete transformedData.universities;
+
         const servers = [
           {url: 'http://127.0.0.1:3004/BenGurion', university: 'אוניברסיטת בן גוריון'},
           {url: 'http://127.0.0.1:3003/TelAviv', university: 'אוניברסיטת תל אביב'},
@@ -25,7 +29,12 @@
           {url: 'http://127.0.0.1:3001/Technion', university: 'טכניון'},
         ];
 
-        const promises = servers.map(async server => {
+        // Filter servers based on selected universities
+        const relevantServers = servers.filter(server => 
+          selectedUniversities.includes(server.university)
+        );
+
+        const promises = relevantServers.map(async server => {
           try {
             const response = await fetch(server.url, {
               method: 'POST',

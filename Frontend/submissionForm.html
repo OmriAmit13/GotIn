@@ -163,7 +163,7 @@
 
             <!-- Step 3: Degree Selection -->
             <div class="form-step" id="step3">
-                <h2>בחירת תואר</h2>
+                <h2>בחירת תואר ואוניברסיטאות</h2>
                 <div class="degree-selection">
                     <label class="required">בחר תואר</label>
                     <select id="degree" required>
@@ -192,11 +192,34 @@
                         <option value="ריפוי בעיסוק">ריפוי בעיסוק</option>
                     </select>
                 </div>
+                <div class="universities-selection">
+                    <label class="required">בחר אוניברסיטאות לבדיקה</label>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="technion" name="universities" value="טכניון" checked>
+                            <label for="technion">טכניון</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="hebrew" name="universities" value="האוניברסיטה העברית" checked>
+                            <label for="hebrew">האוניברסיטה העברית</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="telaviv" name="universities" value="אוניברסיטת תל אביב" checked>
+                            <label for="telaviv">אוניברסיטת תל אביב</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="bengurion" name="universities" value="אוניברסיטת בן גוריון" checked>
+                            <label for="bengurion">אוניברסיטת בן גוריון</label>
+                        </div>
+                    </div>
+                </div>
                 <div class="nav-buttons">
                     <button type="button" onclick="submitForm()">בדוק התאמה</button>
                     <button type="button" class="back-btn" onclick="prevStep(2)">חזרה</button>
                 </div>
             </div>
+
+
         </form>
     </div>
 
@@ -408,13 +431,23 @@
                 return;
             }
 
+            // Validate selected universities
+            const selectedUniversities = Array.from(
+                document.querySelectorAll('input[name="universities"]:checked')
+                ).map(cb => cb.value);
+            if (selectedUniversities.length === 0) {
+                alert('יש לבחור לפחות אוניברסיטה אחת');
+                return;
+            }
+
             const transformedData = {
                 psycho_score: parseInt(psychometric.general),
                 psycho_math: parseInt(psychometric.quantitative),
                 psycho_hebrew: parseInt(psychometric.verbal),
                 psycho_english: parseInt(psychometric.english),
                 highschool_scores: formData.highschool_scores,
-                subject: subject
+                subject: subject,
+                universities: selectedUniversities
             };
             
             // Store the form data and redirect to loading page
