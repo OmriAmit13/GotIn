@@ -71,6 +71,18 @@ This will:
 
 This will terminate all running backend servers.
 
+## Running the tests
+
+1. Make the tests script executable:
+```bash
+chmod +x runTests.sh
+```
+
+2. Run the tests script:
+```bash
+./runTests.sh
+```
+
 ## Port Configuration
 
 The application uses a central `config.json` file in the root directory to manage port configurations for all backend services. The default configuration is:
@@ -123,7 +135,8 @@ You can modify these port numbers in the config file to match your environment r
 │   └── testData.json
 │
 ├── startWebsite.sh          # Script to start all services
-└── stopWebsite.sh           # Script to stop all services
+├── stopWebsite.sh           # Script to stop all services
+└── runTests.sh           # Script to run all tests
 ```
 
 ## Technologies Used
