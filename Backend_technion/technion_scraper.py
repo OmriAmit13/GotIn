@@ -18,6 +18,50 @@ sys.stdout.reconfigure(encoding='utf-8')
 class TechnionUniversity():
 
     ### Static Variables ###
+    valid_technion_degrees = {
+        "אדריכלות נוף",
+        "ארכיטקטורה",
+        "ביולוגיה",
+        "ביולוגיה וכימיה (דו-חוגי)",
+        "הנדסה אזרחית",
+        "הנדסה ביוכימית",
+        "הנדסה ביוטכנולוגיה ומזון",
+        "הנדסה ביו-רפואית",
+        "הנדסה ביו-רפואית ופיזיקה",
+        "הנדסה אווירונוטיקה וחלל",
+        "הנדסת אווירונוטיקה וחלל ופיזיקה",
+        "הנדסת הסביבה",
+        "הנדסת חומרים",
+        "הנדסת חומרים וביולוגיה",
+        "הנדסת חומרים וכימיה",
+        "הנדסת חומרים ופיזיקה",
+        "הנדסת חשמל",
+        "הנדסת חשמל ופיזיקה",
+        "הנדסת חשמל-מתמטיקה",
+        "הנדסה כימית",
+        "הנדסת מחשבים",
+        "הנדסת מיפוי וגיאו-אינפורמציה",
+        "הנדסת מכונות",
+        "הנדסת מערכות מידע",
+        "הנדסת נתונים ומידע",
+        "הנדסת תוכנה",
+        "הנדסת תעשיה וניהול",
+        "חינוך למדע וטכנולוגיה (תואר ראשון)",
+        "חינוך למדע וטכנולוגיה-מדעי המחשב (תואר ראשון)",
+        "כימיה",
+        "מדעי המחשב",
+        "מדעי המחשב ומתמטיקה",
+        "מדעי המחשב ופיזיקה",
+        "מתמטיקה",
+        "מתמטיקה עם מדעי המחשב",
+        "מתמטיקה יישומית",
+        "מתמטיקה – פיזיקה",
+        "פיזיקה",
+        "מדעי הרפואה-מגמת רפואה",
+        "מדעי הרפואה - הנדסה ביו-רפואית (תואר כפול)",
+        "מדעי הרפואה – מדעי המחשב (תואר כפול)"
+    }
+
 
     # Dictionary to map website degree names to Technion degree names
     degree_alternative_name_dict = {
@@ -29,7 +73,7 @@ class TechnionUniversity():
         "מנהל עסקים": None,
         "משפטים": None,
         "עבודה סוציאלית": None,
-        "רפואה": "מדעי הרפואה-מגמת רפואה",
+        "רפואה": "מדעי הרפואה-מגמת רפואה"
     }
 
     # Dictionary to map high school subject names from website to Technion names
@@ -62,8 +106,8 @@ class TechnionUniversity():
         "תלמוד": "תלמוד / תושב\"ע"
     }
 
-    def __init__(self, service, options):
-        self.service = service
+    def __init__(self, options):
+        self.service = Service(ChromeDriverManager().install())
         self.options = options
 
     # This method will be executed when the thread starts
@@ -71,6 +115,24 @@ class TechnionUniversity():
         # Define default values
         msg = ""
         url = "https://admissions.technion.ac.il/sechem-for-admission/sekem/"
+        # Check if requested_degree exists in inputJson, if not, use degree
+        if "requested_degree" not in data and "degree" in data:
+            data["requested_degree"] = data["degree"]
+        
+        requested_degree = data["requested_degree"]
+        if requested_degree in self.degree_alternative_name_dict:
+            technion_degree = self.degree_alternative_name_dict[requested_degree]
+            # If the mapped degree is None, it means this degree doesn't exist in Technion
+            if technion_degree is None:
+                return {"isAccepted": None, "url": url, "message": f"תואר {requested_degree} לא קיים בטכניון"}
+            print(f"Mapped '{requested_degree}' to '{technion_degree}'")
+        else:
+            technion_degree = requested_degree
+            print(f"Using original degree name: '{technion_degree}'")
+        
+        # Check if the degree exists in the valid Technion degrees list
+        if technion_degree not in self.valid_technion_degrees:
+            return {"isAccepted": None, "url": url, "message": f"תואר {requested_degree} לא קיים בטכניון"}
         
         calculated_sum, error_message = self.get_tech_match_score(data)
         
@@ -94,8 +156,7 @@ class TechnionUniversity():
         }
 
     def get_tech_match_score(self, inputJson):
-        #driver = webdriver.Chrome(service=self.service, options=self.options)
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=self.options)
+        driver = webdriver.Chrome(service=self.service, options=self.options)
         wait = WebDriverWait(driver, 10)
         driver.get("https://admissions.technion.ac.il/calculator/")
 
@@ -125,33 +186,53 @@ class TechnionUniversity():
             
             # Wait for form to load
             form = wait.until(EC.presence_of_element_located((By.NAME, "sehem_table")))
-            tech_calc = form.find_element(By.CLASS_NAME, "technion-calculator")
+            tech_calc = WebDriverWait(form, 10).until(
+                EC.presence_of_element_located((By.CLASS_NAME, "technion-calculator"))
+            )
 
             # Wait and click the "bagrotYes" button
-            click_button = WebDriverWait(tech_calc, 10).until(
-                EC.element_to_be_clickable((By.ID, "bagrotYes"))
-            )
-            click_button.click()
-
+            # click_button = WebDriverWait(tech_calc, 10).until(
+            #     EC.element_to_be_clickable((By.ID, "bagrotYes"))
+            # )
+            # driver.execute_script("arguments[0].scrollIntoView(true);", click_button)
+            # time.sleep(1)  # give time for scroll to settle
+            # click_button.click()
+            bagrot_radio = driver.find_element(By.ID, "bagrotYes")
+            driver.execute_script("arguments[0].click();", bagrot_radio)
             # Wait for the mandatory table to be visible
             bagrut_form = WebDriverWait(tech_calc, 10).until(
                 EC.presence_of_element_located((By.ID, "bagrotForm"))
             )
             
-            tables = bagrut_form.find_elements(By.CLASS_NAME, "two-column-table")
+            tables = WebDriverWait(bagrut_form, 10).until(
+                EC.presence_of_all_elements_located((By.CLASS_NAME, "two-column-table"))
+            )
             lines = []
             for table in tables:
                 print(f"table: {table}")
-                print(f"table name: {table.find_element(By.CLASS_NAME, 'sub-title').text.strip()}")
-                tbody = table.find_element(By.TAG_NAME, "tbody")
+                table_name = WebDriverWait(table, 10).until(
+                    EC.presence_of_element_located((By.CLASS_NAME, "sub-title"))
+                )
+                print(f"table name: {table_name}")
+                tbody = WebDriverWait(table, 10).until(
+                    EC.presence_of_element_located((By.TAG_NAME, "tbody"))
+                )
                 rows = tbody.find_elements(By.TAG_NAME, "tr")
                 lines.extend(rows)
 
-            time.sleep(2)
             for line in lines:
                 try:
-                    subject_name_element = line.find_element(By.TAG_NAME, "th")
-                    subject_name = subject_name_element.text.strip()
+                    # subject_th = WebDriverWait(line, 20).until(
+                    #     EC.visibility_of_element_located((By.TAG_NAME, "th"))
+                    # )
+                    subject_th = WebDriverWait(line, 20).until(
+                        EC.visibility_of_element_located((By.XPATH, "./th[@id]"))
+                    )
+                    if subject_th.is_displayed():
+                        subject_name = subject_th.text
+                    else:
+                        # Use JavaScript to get the text content if the element is not visible
+                        subject_name = driver.execute_script("return arguments[0].textContent;", subject_th).strip()
                     print(f"Subject found: {subject_name}")
                     if subject_name in hs_dict:
                         score, units = hs_dict[subject_name]
@@ -159,11 +240,14 @@ class TechnionUniversity():
                         if len(td_elements) >= 2:
                             dropdown_td = td_elements[0]
                             input_td = td_elements[1]
+                            #print(f"Row HTML: {line.get_attribute('outerHTML')}")
 
                             dropdown_menu = dropdown_td.find_elements(By.TAG_NAME, "select")
                             if dropdown_menu:
                                 print("entered drop down try")
-                                dropdown_menu = line.find_element(By.TAG_NAME, "select")
+                                dropdown_menu = WebDriverWait(line, 10).until(
+                                    EC.presence_of_element_located((By.TAG_NAME, "select"))
+                                )
                                 select = Select(dropdown_menu)
                                 
                                 # For all subjects
@@ -194,6 +278,8 @@ class TechnionUniversity():
                         
                 except Exception as e:
                     print(f"Error processing row: {e}")
+                    print("Subject element not found or not interactable")
+                    print(f"Line HTML: {line.get_attribute('outerHTML')}")
 
             
             miktzoaBhira_section = bagrut_form.find_element(By.CLASS_NAME, "four-column-table")

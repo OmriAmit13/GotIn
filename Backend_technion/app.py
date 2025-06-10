@@ -21,13 +21,12 @@ chrome_options.add_experimental_option("prefs", {
     "media.autoplay.enabled": False,
     "media.autoplay.allow-extension-media": False,
 })
-service = Service(ChromeDriverManager().install())
 
 # Route for Technion University analysis
 @app.route('/Technion', methods=['POST'])
 def technion_handler():
     ### initialize the university classes ###
-    technion_university = TechnionUniversity(service, chrome_options)
+    technion_university = TechnionUniversity(chrome_options)
     try:
         request_data = request.get_json()
         logging.info("Received data: %s", request_data)
