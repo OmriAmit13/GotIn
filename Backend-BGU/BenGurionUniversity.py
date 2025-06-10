@@ -87,10 +87,7 @@ class BenGurionUniversity:
                 "english": 0
             }
         results = {}
-            
-        # Start browser and prepare input data
-        print("🚀 Starting Ben Gurion University admission check...")
-        print("💻 Operating System: " + os.name)
+        
         
         # Configure Chrome options with additional compatibility settings
         if self.chrome_options is None:
@@ -290,8 +287,6 @@ class BenGurionUniversity:
 
         # Click the add button for each additional subject (first one is already open)
         for i in range(num_subjects - 1):
-            print(f"➕ Adding subject field {i+2}/{num_subjects}")
-            
             # Scroll up to make sure the button is visible
             driver.execute_script("window.scrollTo(0, 0);")
             
@@ -300,22 +295,18 @@ class BenGurionUniversity:
                 lambda d: d.execute_script("return window.pageYOffset") == 0
             )
             
-            # Print debug info
-            print(f"Looking for add subject button #{i+2}")
             add_button = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, "add-subject")))
             
             # Click the button
             self._safe_click(driver, add_button, f"add subject button {i+2}")
             
             # Wait longer for new field to appear with better detection
-            print(f"Waiting for field #{i+2} to appear")
             # Use a more reliable condition - check total field count AND check for a stable DOM
             WebDriverWait(driver, 15).until(
                 lambda d: len(d.find_elements(By.CSS_SELECTOR, ".user-field, .subject-field, input.simple-input")) > (i+1)*2
             )
             # Add small pause to ensure field is fully rendered
             time.sleep(1)
-            print(f"✅ Field #{i+2} appeared successfully")
             
                 # print("✅ Added new subject field")
          
@@ -370,11 +361,9 @@ class BenGurionUniversity:
                     
                     # Click directly on the first option
                     driver.execute_script("arguments[0].click();", dropdown_options[0])
-                    print(f"✅ Selected subject {subject}: clicked first option")
                 else:
                     # Fallback to ENTER key
                     input_element.send_keys(Keys.ENTER)
-                    print(f"⚠️ No dropdown options found for {subject}, using ENTER key")
                 
                 # Give time for selection to register
                 time.sleep(0.5)
@@ -407,7 +396,6 @@ class BenGurionUniversity:
             else:
                 Exception(f"Could not find grade input for subject {subject}")
             
-            print(f"✅ Subject {subject} entered successfully")
             
             # Wait for page to register the input
             driver.implicitly_wait(1)
@@ -435,7 +423,7 @@ class BenGurionUniversity:
         )
         
         average_score = avg_element.get_attribute("innerText").strip()
-        print(f"🎯 Calculated high school average: {average_score}")
+        #print(f"🎯 Calculated high school average: {average_score}")
         return average_score
     
     def _navigate_to_main_and_enter_average(self, driver, wait, average_score):
@@ -445,7 +433,7 @@ class BenGurionUniversity:
             EC.element_to_be_clickable((By.CSS_SELECTOR, "a.page-link.short-link.prev-link"))
         )
         self._safe_click(driver, back_link, "back to main page button")
-        print("🔙 Returned to main page.")
+        #print("🔙 Returned to main page.")
         
         # Wait for iframe to reload
         driver.switch_to.default_content()
@@ -456,7 +444,7 @@ class BenGurionUniversity:
         )
         
         driver.switch_to.frame(iframe)
-        print("🔁 Re-entered iframe.")
+        #print("🔁 Re-entered iframe.")
         
         # Wait for page to load inside iframe
         WebDriverWait(driver, 5).until(
@@ -474,15 +462,15 @@ class BenGurionUniversity:
         
         avg_input.clear()
         avg_input.send_keys(average_score)
-        print(f"✅ Entered high school average: {average_score}")
+       # print(f"✅ Entered high school average: {average_score}")
 
 
     def _fill_science_bonus_subjects(self, driver, wait, highschool_scores):
         """Fill science bonus subjects."""
-        print("\n🧪 Starting science bonus subjects...")
+        #print("\n🧪 Starting science bonus subjects...")
         
         # Step 1: Math and Physics (fixed fields)
-        print("\n📊 Handling Math (מתמטיקה)...")
+        #print("\n📊 Handling Math (מתמטיקה)...")
         if "מתמטיקה" in highschool_scores:
             math_grade, math_level = highschool_scores["מתמטיקה"]
             
@@ -491,7 +479,7 @@ class BenGurionUniversity:
             self._fill_input_by_id(driver, "item_0_grade", str(math_grade), "Math grade")
             
         # Physics handling
-        print("\n📊 Handling Physics (פיסיקה/פיזיקה)...")
+        #print("\n📊 Handling Physics (פיסיקה/פיזיקה)...")
         physics_key = None
         if "פיסיקה" in highschool_scores.keys():
             physics_key = "פיסיקה"
@@ -517,19 +505,19 @@ class BenGurionUniversity:
             if subject in science_subjects and subject not in ["מתמטיקה", "פיסיקה", "פיזיקה"]:
                 other_subjects.append((subject, highschool_scores[subject]))
                 
-        print(f"📊 Found {len(other_subjects)} additional science subjects")
+        #print(f"📊 Found {len(other_subjects)} additional science subjects")
         
         # Step 3: Process each additional subject
         for idx, (subject, values) in enumerate(other_subjects):
             self._add_science_subject(driver, wait, subject, values, idx)
             
-        print("✅ Completed entering science bonus subjects")
+        #print("✅ Completed entering science bonus subjects")
     
     def _add_science_subject(self, driver, wait, subject, values, idx):
         """Add a science subject to the form."""
         grade, level = values
         subject_idx = idx + 2  # Start after math & physics
-        print(f"\n🔬 Processing science subject #{idx+1}: {subject}")
+        #print(f"\n🔬 Processing science subject #{idx+1}: {subject}")
         
         # Add new subject field
         add_subject_btn = self._find_element_with_retry(driver, wait, [
@@ -566,9 +554,9 @@ class BenGurionUniversity:
                 lambda d: len(d.find_elements(By.CSS_SELECTOR, ".user-field")) > subject_idx
             )
             
-            print(f"✅ Added field for subject #{idx+1}: {subject}")
+            #print(f"✅ Added field for subject #{idx+1}: {subject}")
         else:
-            print("❌ Could not find add subject button")
+            #print("❌ Could not find add subject button")
             return
             
         # Find and use the subject dropdown
@@ -610,11 +598,11 @@ class BenGurionUniversity:
                         
                         # Click directly on the first option
                         driver.execute_script("arguments[0].click();", dropdown_options[0])
-                        print(f"✅ Selected subject {subject}: clicked first option")
+                       # print(f"✅ Selected subject {subject}: clicked first option")
                     else:
                         # Fallback to ENTER key
                         dropdown.send_keys(Keys.ENTER)
-                        print(f"⚠️ No dropdown options found for {subject}, using ENTER key")
+                        #print(f"⚠️ No dropdown options found for {subject}, using ENTER key")
                     
                     # Give time for selection to register
                     time.sleep(0.5)
@@ -627,7 +615,7 @@ class BenGurionUniversity:
                         )
                     )
                     
-                    print(f"✅ Selected subject: {subject}")
+                    #print(f"✅ Selected subject: {subject}")
                     dropdown_found = True
                     break
             except Exception:
@@ -648,7 +636,7 @@ class BenGurionUniversity:
                         )
                         
                         dropdown.send_keys(Keys.ENTER)
-                        print(f"✅ Selected subject (backup method): {subject}")
+                       #print(f"✅ Selected subject (backup method): {subject}")
                         break
             except Exception as e:
                 print(f"❌ Failed to select subject: {e}")
@@ -665,15 +653,15 @@ class BenGurionUniversity:
                 level_input = inputs[0]
                 level_input.clear()
                 level_input.send_keys(str(level))
-                print(f"✅ Entered units: {level}")
+               # print(f"✅ Entered units: {level}")
             
             if len(inputs) >= 2:
                 grade_input = inputs[1]
                 grade_input.clear()
                 grade_input.send_keys(str(grade))
-                print(f"✅ Entered grade: {grade}")
+              #  print(f"✅ Entered grade: {grade}")
         
-        print(f"✅ Completed processing subject: {subject}")
+       # print(f"✅ Completed processing subject: {subject}")
         
         # Wait for page to register changes
         driver.implicitly_wait(2)
@@ -690,7 +678,7 @@ class BenGurionUniversity:
             
             input_field.clear()
             input_field.send_keys(value)
-            print(f"✅ {field_name}: {value}")
+          #  print(f"✅ {field_name}: {value}")
             
             # Wait for input to register
             driver.implicitly_wait(0.5)
@@ -715,7 +703,7 @@ class BenGurionUniversity:
 
     def _navigate_to_psychometric_page(self, driver, wait):
         """Navigate to the psychometric scores page."""
-        print("\n🔄 Navigating to psychometric page...")
+       # print("\n🔄 Navigating to psychometric page...")
         
         # Need to click twice to reach psychometric page
         for i in range(2):
@@ -733,12 +721,12 @@ class BenGurionUniversity:
                     lambda d: d.execute_script("return document.readyState") == "complete"
                 )
                 
-                print(f"✅ Clicked 'Next' button ({i+1}/2)")
+               # print(f"✅ Clicked 'Next' button ({i+1}/2)")
             else:
                 print(f"❌ Could not find 'Next' button ({i+1}/2)")
 
         
-        print("\n📝 Now on psychometric score page")
+      #  print("\n📝 Now on psychometric score page")
         
         # Wait for the psychometric page to load completely
         WebDriverWait(driver, 3).until(
@@ -747,7 +735,7 @@ class BenGurionUniversity:
 
     def _fill_psychometric_scores(self, driver, wait, psychometric):
         """Fill psychometric exam scores."""
-        print("\n📊 Entering psychometric scores...")
+       # print("\n📊 Entering psychometric scores...")
         
         # Get scores with multiple possible key formats
         total_score = psychometric.get("total", psychometric.get("general", psychometric.get("psycho_score", 0)))
@@ -760,10 +748,10 @@ class BenGurionUniversity:
                                                "div.user-field.content-description.psychometry")
         
         if not psychometry_fields:
-            print("⚠️ Couldn't find psychometric input fields using primary selector")
+          #  print("⚠️ Couldn't find psychometric input fields using primary selector")
             psychometry_fields = driver.find_elements(By.CSS_SELECTOR, "div.user-field")
         
-        print(f"Found {len(psychometry_fields)} psychometric input fields")
+       # print(f"Found {len(psychometry_fields)} psychometric input fields")
         
         # Maps for field labels to corresponding score values
         field_map = {
@@ -811,14 +799,14 @@ class BenGurionUniversity:
                 
                 input_element.clear()
                 input_element.send_keys(str(score_value))
-                print(f"✅ Entered {field_name} score: {score_value}")
+              #  print(f"✅ Entered {field_name} score: {score_value}")
 
         
         # Check if we missed any fields and use alternative methods
         missed_fields = [key for key, value in entered_scores.items() if not value]
         if missed_fields:
-            print(f"⚠️ Could not find fields for: {', '.join(missed_fields)}")
-            print("Trying alternative approach...")
+         #   print(f"⚠️ Could not find fields for: {', '.join(missed_fields)}")
+          #  print("Trying alternative approach...")
             
             for field_name in missed_fields:
                 try:
@@ -852,16 +840,16 @@ class BenGurionUniversity:
                         
                         input_element.clear()
                         input_element.send_keys(str(field_map[field_name]))
-                        print(f"✅ Entered {field_name} score using alternative method: {field_map[field_name]}")
+                     #   print(f"✅ Entered {field_name} score using alternative method: {field_map[field_name]}")
                         
                 except Exception as e:
                     print(f"❌ Failed to enter {field_name} score: {e}")
         
-        print("📊 Completed entering psychometric scores")
+      #  print("📊 Completed entering psychometric scores")
 
     def _navigate_to_results_page(self, driver, wait):
         """Navigate through the remaining pages to reach the results."""
-        print("\n🔍 Continuing navigation to results page...")
+       # print("\n🔍 Continuing navigation to results page...")
         
         # Click three 'Next' buttons with specific targets
         next_button_targets = [
@@ -872,7 +860,7 @@ class BenGurionUniversity:
         
         # Enhanced approach - try multiple strategies to navigate forward
         for target in next_button_targets:
-            print(f"🔄 Looking for {target['name']} 'Next' button ({target['href']})...")
+          #  print(f"🔄 Looking for {target['name']} 'Next' button ({target['href']})...")
             time.sleep(1)
             success = False
             
@@ -910,7 +898,7 @@ class BenGurionUniversity:
                 try:
                     if strategy():
                         success = True
-                        print(f"✅ Successfully navigated past {target['name']} step")
+                       # print(f"✅ Successfully navigated past {target['name']} step")
                         break
                 except Exception as e:
                     continue
@@ -926,7 +914,7 @@ class BenGurionUniversity:
             except TimeoutException:
                 pass  # Continue even if timeout
         
-        print("✅ Navigation process completed - attempting to continue")
+      #  print("✅ Navigation process completed - attempting to continue")
 
     def _try_click_button(self, driver, wait, by_method, selector, description):
         """Helper method to find and click buttons with better error handling."""
@@ -951,7 +939,7 @@ class BenGurionUniversity:
                 return True
             return False
         except Exception as e:
-            print(f"❌ Could not click {description}: {e}")
+          #  print(f"❌ Could not click {description}: {e}")
             return False
     
     def _try_click_any_forward_element(self, driver, wait):
@@ -981,7 +969,7 @@ class BenGurionUniversity:
             possible_elements.extend(elements)
         
         if not possible_elements:
-            print("❌ Could not find any potential navigation elements")
+           # print("❌ Could not find any potential navigation elements")
             return False
         
         # Try clicking elements that are visible
@@ -1004,29 +992,99 @@ class BenGurionUniversity:
         results = {}
         
         try:
-            # Click on "כל תחומי הלימוד אליהם התקבלתי" (All fields of study you were accepted to)
-            acceptance_button = self._find_element_with_retry(driver, wait, [
-                (By.XPATH, "//a[contains(., 'כל תחומי הלימוד אליהם התקבלתי')]"),
-                (By.CSS_SELECTOR, "a.page-link[href='#/final-results'], a[href*='final-result']"),
-                (By.XPATH, "//a[contains(@class, 'page-link') and contains(text(), 'תחומי')]")
-            ])
+            # Force the page to be fully loaded before attempting to find elements
+            WebDriverWait(driver, 10).until(
+                lambda d: d.execute_script("return document.readyState") == "complete"
+            )
+            time.sleep(2)  # Give extra time for all JavaScript to execute
             
-            if acceptance_button:
-                time.sleep(1)
-                self._safe_click(driver, acceptance_button, "acceptance list button")
-                print("✅ Clicked on acceptance list button")
-                
-                # Wait for page transition
-                WebDriverWait(driver, 3).until(
-                    lambda d: d.execute_script("return document.readyState") == "complete"
-                )
-            else:
-                Exception("Could not find acceptance list button")
+          #  print("🔍 Looking for results buttons...")
+            
+            # Based on the exact HTML structure, target the specific link we need
+          #  print("🔍 Looking for the final results link with href='#/final-results'...")
+            
+            # Wait longer for all elements to be fully rendered
+            time.sleep(2)
+            
+            # Try using the exact CSS selector for the link we want - from the HTML code
+            try:
+                # First try with the most specific selector
+                final_results_link = driver.find_element(By.CSS_SELECTOR, "a.page-link[href='#/final-results']")
+              #  print("✅ Found final results link using exact CSS selector")
+            except:
+                print("⚠️ Could not find link with exact CSS selector, trying XPath...")
+                try:
+                    # Try with XPath as a fallback
+                    final_results_link = driver.find_element(By.XPATH, "//a[@href='#/final-results']")
+                 #  print("✅ Found final results link using XPath")
+                except:
+                    print("⚠️ Could not find link with href='#/final-results', trying text content...")
+                    
+                    # Fall back to looking by text content
+                    links = driver.find_elements(By.TAG_NAME, "a")
+                    final_results_link = None
+                    target_text = "כל תחומי הלימוד אליהם התקבלתי"
+                    
+                    for link in links:
+                        try:
+                            if target_text in link.text:
+                                final_results_link = link
+                              #  print(f"✅ Found link with target text: {link.text}")
+                                break
+                        except:
+                            continue
+                    
+                    if not final_results_link:
+                        # Last resort - third a.page-link on the page
+                        links = driver.find_elements(By.CSS_SELECTOR, "a.page-link")
+                        if len(links) >= 3:
+                            final_results_link = links[2]  # Try the third link
+                            print("⚠️ Using third page-link as fallback")
+                        else:
+                            raise Exception("Could not find the final results link")
+            
+            # Now we have the link element, scroll to it and click it
+          #  print(f"🔘 Attempting to click: {final_results_link.tag_name} with text: '{final_results_link.text}'")
+            driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", final_results_link)
+            time.sleep(1)
+            
+            # Try different click methods in order of reliability
+            try:
+                # Most reliable for links - direct href navigation
+                href = final_results_link.get_attribute('href')
+                if href and href.startswith('#'):
+                    url = driver.current_url.split('#')[0] + href
+                  #  print(f"🔗 Navigating directly to URL: {url}")
+                    driver.get(url)
+                   # print("✅ Navigated directly to link URL")
+                else:
+                    # Try JavaScript click
+                    driver.execute_script("arguments[0].click();", final_results_link)
+                   # print("✅ Clicked link using JavaScript")
+            except:
+                try:
+                    # Try direct click
+                    final_results_link.click()
+                 #   print("✅ Clicked link directly")
+                except Exception as e:
+                   # print(f"❌ All click methods failed: {e}")
+                    raise Exception("Could not click on final results link")
+            
+          #  print("✅ Button click attempt completed")
+            
+            # Wait for page transition
+            WebDriverWait(driver, 3).until(
+                lambda d: d.execute_script("return document.readyState") == "complete"
+            )
             
             # Wait for the list to load
             WebDriverWait(driver, 3).until(
                 lambda d: len(d.find_elements(By.CSS_SELECTOR, "div.content, div.results-container, div")) > 0
             )
+            
+            # After clicking the button, wait a moment for content to fully load
+            time.sleep(2)
+           # print("🔍 Looking for accepted degrees directly on the page...")
             
             # Degree mapping for BGU website
             degree_mapping = self._get_degree_mapping()
@@ -1034,71 +1092,139 @@ class BenGurionUniversity:
             # Extract accepted degrees from the page
             accepted_degrees = []
             
-            # Try different container selectors
+            # Try specific selectors for departments first
+            department_items = driver.find_elements(By.CSS_SELECTOR, ".departments-list div, .react-select__option")
+            if department_items:
+                for item in department_items:
+                    item_text = item.text.strip()
+                    if item_text and len(item_text) > 2:  # Skip very short items
+                        accepted_degrees.append(item_text)
+                      #  print(f"📋 Found department: {item_text}")
+            
+            # Then try the general container selectors
             containers = driver.find_elements(By.CSS_SELECTOR, ".final-results-list, .degrees-list, .results-container, div.item-list")
             if not containers:
                 containers = driver.find_elements(By.CSS_SELECTOR, "div.content, div.page-content, div.results, ul, ol, div.item")
             if not containers:
                 containers = driver.find_elements(By.CSS_SELECTOR, "div")
             
-            print(f"🔍 Found {len(containers)} potential containers to check")
+         #   print(f"🔍 Found {len(containers)} potential containers to check")
             
-            # Extract text from containers
-            all_text = []
-            for container in containers:
-                try:
-                    container_text = container.text
-                    if container_text:
-                        all_text.append(container_text)
+            # Look directly for degrees with "קבלה" icon/text as shown in the screenshot
+           # print("🔍 Looking for degrees with acceptance status directly...")
+            
+            # Based on the screenshot, look for the accordion rows with קבלה icon
+            try:
+                # Find all rows that have the קבלה text/icon
+                acceptance_rows = driver.find_elements(By.XPATH, "//div[contains(@class, 'accordion')]//div[contains(@class, 'accordion_item')]")
+                accepted_degrees = []
+                
+             #   print(f"Found {len(acceptance_rows)} potential degree rows")
+                
+                # Get the actual degree names from these rows
+                for row in acceptance_rows:
+                    try:
+                        # Check if the row contains "קבלה" text
+                        if "קבלה" in row.text:
+                            row_text = row.text.strip()
+                            # Capture the entire row text which should contain the degree name
+                            accepted_degrees.append(row_text)
+                         #  print(f"✅ Found accepted degree row: '{row_text}'")
+                    except:
+                        continue
                         
-                        # Try to find individual degree items
-                        items = container.find_elements(By.CSS_SELECTOR, "li, div.item, div.degree-item, div.result-item, p, span")
-                        for item in items:
-                            item_text = item.text.strip()
-                            if item_text:
-                                accepted_degrees.append(item_text)
-                except Exception as e:
-                    print(f"⚠️ Error processing container: {e}")
-            
-            # If no specific items found, split text by lines
-            if not accepted_degrees and all_text:
-                print("📝 Using container text split by lines...")
-                accepted_degrees = [line.strip() for text in all_text for line in text.split('\n') if line.strip()]
-            
-            # If still empty, use body text
-            if not accepted_degrees:
-                print("📝 Using body text...")
-                body_text = driver.find_element(By.TAG_NAME, "body").text
-                accepted_degrees = [line.strip() for line in body_text.split('\n') if line.strip()]
-            
-            print(f"📝 Found {len(accepted_degrees)} potential degree entries")
-            
-            # Check each degree for acceptance
-            for degree in degrees_to_check:
-                bgu_degree_name = degree_mapping.get(degree, degree)
-                clean_bgu_degree = self._clean_degree_name(bgu_degree_name)
-                
-                is_accepted = False
-                for accepted in accepted_degrees:
-                    clean_accepted = self._clean_degree_name(accepted)
+                # If we didn't find degrees with the above method, try more generic approach
+                if not accepted_degrees:
+                    # Look for checkmarks or specific HTML structure 
+                    checkmarks = driver.find_elements(By.CSS_SELECTOR, ".accordion_item svg, .v-icon, .checkmark")
                     
-                    # Check different matching criteria
-                    if (clean_accepted == clean_bgu_degree or
-                        accepted.startswith(bgu_degree_name) or
-                        clean_accepted.startswith(clean_bgu_degree) or
-                        bgu_degree_name in accepted or
-                        clean_bgu_degree in clean_accepted):
-                        is_accepted = True
-                        break
+                    for check in checkmarks:
+                        try:
+                            # Get parent element which should contain the degree name
+                            parent = check.find_element(By.XPATH, "./ancestor::div[contains(@class, 'accordion_item') or contains(@class, 'row')]")
+                            if parent and "קבלה" in parent.text:
+                                accepted_degrees.append(parent.text)
+                              #  print(f"✅ Found degree with checkmark: '{parent.text}'")
+                        except:
+                            continue
+            except Exception as e:
+                print(f"❌ Error finding acceptance rows: {e}")
+            
+            # If still no results, fall back to searching the entire page
+            if not accepted_degrees:
+             #   print("⚠️ Falling back to whole page search for acceptance indicators")
                 
-                # Record the result using the original degree name
-                results[degree] = "התקבלתי" if is_accepted else "לא התקבלתי"
-                print(f"📊 Result for {degree}: {results[degree]}")
+                # Look for any spans or divs with "קבלה" as these are likely acceptance indicators
+                acceptance_indicators = driver.find_elements(By.XPATH, 
+                    "//span[contains(text(), 'קבלה')] | //div[contains(text(), 'קבלה')]")
+                
+                for indicator in acceptance_indicators:
+                    try:
+                        # Get the parent row or container that should have the degree name
+                        parent = indicator.find_element(By.XPATH, 
+                            "./ancestor::div[contains(@class, 'row') or contains(@class, 'item') or contains(@class, 'accordion')]")
+                        
+                        if parent:
+                            text = parent.text.strip()
+                            if text and len(text) > 5:  # Ensure it's not just "קבלה" alone
+                                accepted_degrees.append(text)
+                             #   print(f"✅ Found acceptance indicator with parent: '{text}'")
+                    except:
+                        continue
+            
+         #   print(f"📝 Found {len(accepted_degrees)} potential degree entries")
+            
+            # Check each degree for acceptance - use more flexible matching
+            for degree in degrees_to_check:
+                    bgu_degree_name = degree_mapping.get(degree, degree)
+                    clean_bgu_degree = self._clean_degree_name(bgu_degree_name)
+                    
+                    # Only print what we're checking for, not the entire list
+                 #   print(f"🔍 מחפש אם התואר {degree} נמצא ברשימת המתקבלים")
+                    
+                    # First attempt: try to find exact matches or clean matches
+                    is_accepted = False
+                    for accepted in accepted_degrees:
+                        clean_accepted = self._clean_degree_name(accepted)
+                        
+                        # Check if "קבלה" (acceptance) appears in the same line as the degree name
+                        if "קבלה" in accepted and (
+                            clean_accepted == clean_bgu_degree or
+                            accepted.startswith(bgu_degree_name) or
+                            clean_accepted.startswith(clean_bgu_degree) or
+                            bgu_degree_name in accepted or
+                            clean_bgu_degree in clean_accepted):
+                            is_accepted = True
+                          #  print(f"✅ נמצאה התאמה לתואר '{degree}' בשורה '{accepted}'")
+                            break
+                    
+                    # Second attempt: try more flexible token matching
+                    if not is_accepted:
+                        # Split degree into tokens and check if all tokens appear in any accepted degree
+                        degree_tokens = set(clean_bgu_degree.split())
+                        if "הנדסה" in clean_bgu_degree and "הנדסת" not in clean_bgu_degree:
+                            # Add הנדסת variant for more flexible matching
+                            degree_tokens.add("הנדסת")
+                            
+                        for accepted in accepted_degrees:
+                            clean_accepted = self._clean_degree_name(accepted)
+                            accepted_tokens = set(clean_accepted.split())
+                            
+                            # Check if at least half of the tokens match
+                            matches = degree_tokens.intersection(accepted_tokens)
+                            if "קבלה" in accepted and len(matches) >= len(degree_tokens) // 2:
+                                is_accepted = True
+                             #   print(f"✅ נמצאה התאמה חלקית לתואר '{degree}' בשורה '{accepted}'")
+                                break
+                
+                    # Record the result using the original degree name
+                    results[degree] = "התקבלתי" if is_accepted else "לא התקבלתי"
+                   # print(f"📊 תוצאה עבור התואר {degree}: {results[degree]}")
                 
             return results
             
         except Exception as e:
-            print(f"❌ Error checking acceptance list: {e}")
+          #  print(f"❌ Error checking acceptance list: {e}")
             # Raise the exception to trigger fallback to individual degree checking
             raise
     
@@ -1106,7 +1232,7 @@ class BenGurionUniversity:
         """
         Check admission eligibility for specific degrees by searching individually.
         """
-        print("\n📋 Checking admission for specific degrees...")
+      #  print("\n📋 Checking admission for specific degrees...")
         results = {}
         
         # Click on "חישוב סיכויי הקבלה שלי" button (Calculate my admission chances)
@@ -1117,14 +1243,14 @@ class BenGurionUniversity:
         
         if calc_chances_button:
             self._safe_click(driver, calc_chances_button, "'Calculate admission chances' button")
-            print("✅ Clicked on 'Calculate admission chances' button")
+         #  print("✅ Clicked on 'Calculate admission chances' button")
             
             # Wait for page transition
             WebDriverWait(driver, 3).until(
                 lambda d: d.execute_script("return document.readyState") == "complete"
             )
         else:
-            print("❌ Could not navigate to admission chances page")
+          #  print("❌ Could not navigate to admission chances page")
             return {"error": "Navigation to admission calculator failed"}
         
         # Click the calculate admission chances button
@@ -1133,7 +1259,7 @@ class BenGurionUniversity:
                 EC.element_to_be_clickable((By.CSS_SELECTOR, ".submit-btn"))
             )
             self._safe_click(driver, calc_button, "calculate admission button")
-            print("✅ Clicked on calculate admission chances button.")
+         #   print("✅ Clicked on calculate admission chances button.")
             
             # Wait for calculation to complete
             WebDriverWait(driver, 3).until(
@@ -1152,7 +1278,7 @@ class BenGurionUniversity:
                 try:
                     # Get the BGU website name for this degree
                     bgu_degree_name = degree_mapping.get(degree, degree)
-                    print(f"\n🔍 Checking degree: {degree} (searching as '{bgu_degree_name}')")
+                  #  print(f"\n🔍 Checking degree: {degree} (searching as '{bgu_degree_name}')")
                     
                     # Find the degree search field
                     degree_search = self._find_element_with_retry(driver, wait, [
@@ -1162,7 +1288,7 @@ class BenGurionUniversity:
                     ])
                     
                     if not degree_search:
-                        print("❌ Could not find degree search field")
+                      #  print("❌ Could not find degree search field")
                         results[degree] = "Error finding search field"
                         break
                     
@@ -1186,7 +1312,7 @@ class BenGurionUniversity:
                         pass
                     
                     degree_search.send_keys(Keys.RETURN)
-                    print(f"📝 Entered degree name: '{bgu_degree_name}' (for {degree})")
+                 #   print(f"📝 Entered degree name: '{bgu_degree_name}' (for {degree})")
                     
                     # Wait for results to appear
                     WebDriverWait(driver, 3).until(
@@ -1204,7 +1330,7 @@ class BenGurionUniversity:
                         # Extract and store the result
                         acceptance_text = result_element.text
                         results[degree] = acceptance_text
-                        print(f"📊 Result for {degree}: {acceptance_text}")
+                     #   print(f"📊 Result for {degree}: {acceptance_text}")
                         
                         # Clear for next search
                         clear_button = self._find_element_with_retry(driver, wait, [
@@ -1227,12 +1353,12 @@ class BenGurionUniversity:
                         # Break out of retry loop on success
                         break
                     else:
-                        print(f"❌ Could not find results for {degree}")
+                    #    print(f"❌ Could not find results for {degree}")
                         # Will retry if not last attempt
                         driver.implicitly_wait(1)  # Short wait before retry
                         
                 except Exception as e:
-                    print(f"❌ Problem searching for {degree} (attempt {retry+1}/{max_retries}): {e}")
+                #   print(f"❌ Problem searching for {degree} (attempt {retry+1}/{max_retries}): {e}")
                     # Continue to next retry if available
                     driver.implicitly_wait(1)  # Short wait before retry
             
@@ -1256,7 +1382,9 @@ class BenGurionUniversity:
             "הנדסה אזרחית/הנדסת בנייין": "הנדסה אזרחית/הנדסת בנייין",
             "פסיכולוגיה": "פסיכולוגיה",
             "כלכלה": "כלכלה",
-            "הנדסה תעשייה וניהול": "הנדסה תעשייה וניהול",
+            # For הנדסה תעשייה וניהול, add multiple variants that might appear on the website
+            "הנדסה תעשייה וניהול": "הנדסת תעשייה וניהול",
+            "הנדסת תעשייה וניהול": "הנדסת תעשייה וניהול",
             "הנדסת חשמל": "הנדסת חשמל",
             "הנדסת ביוטכנולוגיה": "הנדסת ביוטכנולוגיה",
             "הנדסה ביורפואית": "הנדסה ביורפואית",
@@ -1333,7 +1461,7 @@ class BenGurionUniversity:
             )
             return element
         except (TimeoutException, StaleElementReferenceException) as e:
-            print(f"Element not clickable: {selector}, Error: {e}")
+           # print(f"Element not clickable: {selector}, Error: {e}")
             return None
             
     def _safe_click(self, driver, element, description="element"):
@@ -1365,7 +1493,7 @@ class BenGurionUniversity:
                 # Fall back to JavaScript click
                 driver.execute_script("arguments[0].click();", element)
                 
-            print(f"✅ Clicked on {description}")
+         #   print(f"✅ Clicked on {description}")
             
             # Wait for any click effects to register
             WebDriverWait(driver, 2).until(
@@ -1374,7 +1502,7 @@ class BenGurionUniversity:
             
             return True
         except Exception as e:
-            print(f"❌ Failed to click {description}: {e}")
+         #   print(f"❌ Failed to click {description}: {e}")
             return False
 
     def adapt_highschool_scores(self, highschool_scores):
