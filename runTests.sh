@@ -27,7 +27,7 @@ cd ..
 
 # Wait for servers to start
 echo "Waiting for servers to start..."
-sleep 5
+sleep 7
 
 # Run tests
 cd Tests

@@ -234,9 +234,7 @@ class HebrewUniversity:
     # === first website ===
     def getDriver1(self):    
         
-        # driver = webdriver.Chrome(service=self.service)
-        driver = webdriver.Chrome(service=self.service)
-        # driver = webdriver.Chrome(service=self.service, options=self.options)
+        driver = webdriver.Chrome(service=self.service, options=self.options)
 
         driver.get("https://bagrut-calculator.huji.ac.il/calculator/#/grade-input")
 
@@ -397,8 +395,7 @@ class HebrewUniversity:
     # === second website ===
     def getDriver2(self):
 
-        # driver = webdriver.Chrome(service=self.service, options=self.options)
-        driver = webdriver.Chrome(service=self.service)
+        driver = webdriver.Chrome(service=self.service, options=self.options)
         driver.get("https://go.huji.ac.il/?locale=he")
         time.sleep(3)
 
@@ -500,6 +497,8 @@ class HebrewUniversity:
         result_text = result_el.text.strip()
 
         url = driver.current_url
+
+        driver.quit()
 
         if "לא תתאפשר קבלה" in result_text:
             return {"isAccepted": "דחייה", "url": url, "message": None}

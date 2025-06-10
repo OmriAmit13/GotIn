@@ -11,7 +11,6 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import WebDriverException, InvalidSessionIdException, NoSuchWindowException, TimeoutException, StaleElementReferenceException
 from webdriver_manager.chrome import ChromeDriverManager
 import time
-
 class BenGurionUniversity:
     """
     Class for handling Ben Gurion University admission calculations.
@@ -19,10 +18,11 @@ class BenGurionUniversity:
     """
 
     def __init__(self, service=None, chrome_options=None):
-        # Store browser configuration for later
-        self.service = service
+        # Initialize service immediately like TelAvivUniversity does
+        self.service = Service(ChromeDriverManager().install())
+        
+        # Store chrome options
         self.chrome_options = chrome_options
-        self.use_webdriver_manager = (service is None)
         
         # Initialize WebDriver attributes
         self.driver = None
@@ -32,27 +32,18 @@ class BenGurionUniversity:
         self.base_url = "https://www.bgu.ac.il/welcome/ba/calculator/"
         
     def start_browser(self, wait_time=15):
-        """
-        Start the browser session if not already started.
-        
-        Args:
-            wait_time: Default wait time for WebDriverWait in seconds
-        """
         if self.driver is None:
             # Configure Chrome options if not provided
             if self.chrome_options is None:
                 self.chrome_options = Options()
-                self.chrome_options.add_argument("--headless=new")
+                # Removed headless mode to see browser UI
+                # self.chrome_options.add_argument("--headless=new")
                 self.chrome_options.add_argument("--disable-gpu")
                 self.chrome_options.add_argument("--window-size=1920,1080")
                 self.chrome_options.add_argument("--no-sandbox")
                 self.chrome_options.add_argument("--disable-dev-shm-usage")
             
-            # Create service using WebDriverManager if needed
-            if self.use_webdriver_manager:
-                self.service = Service(ChromeDriverManager().install())
-                
-            # Initialize driver and wait
+            # Initialize driver using the service we created in __init__
             self.driver = webdriver.Chrome(service=self.service, options=self.chrome_options)
             self.wait = WebDriverWait(self.driver, wait_time)
     
@@ -64,21 +55,7 @@ class BenGurionUniversity:
             self.wait = None
             
     def run(self, request_data):
-        """
-        Main method to process the admission calculation request.
-        
-        Args:
-            request_data: Dictionary with user data for admission calculation
-            
-        Returns:
-            Dictionary with admission results in Technion-compatible format:
-            {
-                "isAccepted": result,  # "קבלה", "דחייה", or None
-                "url": url,            # URL to Ben Gurion admission page
-                "message": message     # Descriptive message about admission result
-            }
-        """
-
+       
         if request_data["subject"] == "משפטים":
             return {
                 "isAccepted": None,
@@ -118,7 +95,8 @@ class BenGurionUniversity:
         # Configure Chrome options with additional compatibility settings
         if self.chrome_options is None:
             self.chrome_options = Options()
-            self.chrome_options.add_argument("--headless=new")
+            # Removed headless mode to see browser UI
+            # self.chrome_options.add_argument("--headless=new")
             self.chrome_options.add_argument("--disable-gpu")
             self.chrome_options.add_argument("--window-size=1920,1080")
             self.chrome_options.add_argument("--no-sandbox")
@@ -141,9 +119,6 @@ class BenGurionUniversity:
         
         # Handle degrees_to_check more robustly - could be array, string, or come from subject field
         degrees_to_check_raw = request_data.get("degrees_to_check", [])
-        if "משפטים" in degrees_to_check:
-            self.close_browser()
-            return {"isAccepted": None, "url": self.base_url, "message": "לא קיים תואר משפטים בבן גוריון"}
         
         # Convert to list if it's a string
         if isinstance(degrees_to_check_raw, str):
@@ -154,6 +129,11 @@ class BenGurionUniversity:
         # Otherwise default to empty list
         else:
             degrees_to_check = []
+            
+        # Check for law degree after degrees_to_check is properly initialized
+        if "משפטים" in degrees_to_check:
+            self.close_browser()
+            return {"isAccepted": None, "url": self.base_url, "message": "לא קיים תואר משפטים בבן גוריון"}
             
         # If degrees_to_check is empty and subject is provided, use subject
         if not degrees_to_check and "subject" in request_data:
@@ -310,24 +290,32 @@ class BenGurionUniversity:
 
         # Click the add button for each additional subject (first one is already open)
         for i in range(num_subjects - 1):
-            # print(f"➕ Adding subject field {i+2}/{num_subjects}")
+            print(f"➕ Adding subject field {i+2}/{num_subjects}")
             
             # Scroll up to make sure the button is visible
             driver.execute_script("window.scrollTo(0, 0);")
             
-            # Wait for the page to scroll to top
-            WebDriverWait(driver, 2).until(
+            # Wait longer for the page to scroll to top
+            WebDriverWait(driver, 3).until(
                 lambda d: d.execute_script("return window.pageYOffset") == 0
             )
+            
+            # Print debug info
+            print(f"Looking for add subject button #{i+2}")
             add_button = wait.until(EC.element_to_be_clickable((By.CLASS_NAME, "add-subject")))
             
             # Click the button
             self._safe_click(driver, add_button, f"add subject button {i+2}")
             
-            # Wait for new field to appear
-            WebDriverWait(driver, 3).until(
-                lambda d: len(d.find_elements(By.CSS_SELECTOR, ".user-field")) > i+1
+            # Wait longer for new field to appear with better detection
+            print(f"Waiting for field #{i+2} to appear")
+            # Use a more reliable condition - check total field count AND check for a stable DOM
+            WebDriverWait(driver, 15).until(
+                lambda d: len(d.find_elements(By.CSS_SELECTOR, ".user-field, .subject-field, input.simple-input")) > (i+1)*2
             )
+            # Add small pause to ensure field is fully rendered
+            time.sleep(1)
+            print(f"✅ Field #{i+2} appeared successfully")
             
                 # print("✅ Added new subject field")
          
@@ -353,14 +341,43 @@ class BenGurionUniversity:
                 input_element.clear()
                 input_element.send_keys(Keys.CONTROL + "a")
                 input_element.send_keys(Keys.DELETE)
-                input_element.send_keys(subject)
                 
-                # Wait for dropdown to appear with options
-                WebDriverWait(driver, 2).until(
-                    lambda d: len(d.find_elements(By.CSS_SELECTOR, ".react-select__menu")) > 0
+                # Type the subject name character by character with pauses for better recognition
+                for char in subject:
+                    input_element.send_keys(char)
+                    time.sleep(0.1)  # Small pause between characters
+                
+                # Add extra pause to ensure dropdown has time to register
+                time.sleep(1)
+                
+                # Wait longer for dropdown to appear with options
+                WebDriverWait(driver, 8).until(
+                    lambda d: len(d.find_elements(By.CSS_SELECTOR, ".react-select__menu, .dropdown-menu")) > 0
                 )
                 
-                input_element.send_keys(Keys.ENTER)
+                # Get the dropdown options
+                dropdown_options = driver.find_elements(
+                    By.CSS_SELECTOR, ".react-select__option, .react-select__menu-list > div"
+                )
+                
+                # If options exist, click the first one directly
+                if dropdown_options and len(dropdown_options) > 0:
+                    # Scroll the option into view
+                    driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", dropdown_options[0])
+                    
+                    # Wait for element to be stable
+                    self._wait_for_element_stable(driver, dropdown_options[0])
+                    
+                    # Click directly on the first option
+                    driver.execute_script("arguments[0].click();", dropdown_options[0])
+                    print(f"✅ Selected subject {subject}: clicked first option")
+                else:
+                    # Fallback to ENTER key
+                    input_element.send_keys(Keys.ENTER)
+                    print(f"⚠️ No dropdown options found for {subject}, using ENTER key")
+                
+                # Give time for selection to register
+                time.sleep(0.5)
             
             # Find and fill level/units field
             level_input = self._find_element_with_retry(driver, wait,
@@ -573,15 +590,34 @@ class BenGurionUniversity:
                     dropdown.clear()
                     dropdown.send_keys(subject)
                     
-                    # Wait for dropdown to appear
-                    try:
-                        WebDriverWait(driver, 2).until(
-                            lambda d: len(d.find_elements(By.CSS_SELECTOR, ".react-select__menu")) > 0
-                        )
-                    except TimeoutException:
-                        pass
+                    # Wait longer for dropdown to appear
+                    WebDriverWait(driver, 5).until(
+                        lambda d: len(d.find_elements(By.CSS_SELECTOR, ".react-select__menu")) > 0
+                    )
+                    
+                    # Get the dropdown options
+                    dropdown_options = driver.find_elements(
+                        By.CSS_SELECTOR, ".react-select__option, .react-select__menu-list > div"
+                    )
+                    
+                    # If options exist, click the first one directly
+                    if dropdown_options and len(dropdown_options) > 0:
+                        # Scroll the option into view
+                        driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", dropdown_options[0])
                         
-                    dropdown.send_keys(Keys.ENTER)
+                        # Wait for element to be stable
+                        self._wait_for_element_stable(driver, dropdown_options[0])
+                        
+                        # Click directly on the first option
+                        driver.execute_script("arguments[0].click();", dropdown_options[0])
+                        print(f"✅ Selected subject {subject}: clicked first option")
+                    else:
+                        # Fallback to ENTER key
+                        dropdown.send_keys(Keys.ENTER)
+                        print(f"⚠️ No dropdown options found for {subject}, using ENTER key")
+                    
+                    # Give time for selection to register
+                    time.sleep(0.5)
                     
                     # Wait for selection to be applied
                     WebDriverWait(driver, 2).until(
@@ -1347,10 +1383,10 @@ class BenGurionUniversity:
         "פיזיקה":"פיסיקה",
         "חינוך פיננסי":"כלכלה",
         "לימודי ארץ ישראל וארכיאולוגיה":"לימודי ארץ ישראל",
-        "מערכות מידע":"מערכות מידענות ממוחשבות"
+        "מערכות מידע":"מערכות מידענות ממוחשבות",
+        "מוזיקה":"מוסיקה"
         }
         # Replace subject names with university's naming
         for subject in highschool_scores.copy():
             if subject in highschool_subject_name_dict:
                 highschool_scores[highschool_subject_name_dict[subject]] = highschool_scores.pop(subject)
-                
