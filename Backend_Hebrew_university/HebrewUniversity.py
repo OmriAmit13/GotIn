@@ -20,7 +20,6 @@ class HebrewUniversity:
         "עברית: הבנה, הבעה ולשון",
         "אנגלית",
         "מתמטיקה",
-        "פיזיקה",
         "ספרות",
         "היסטוריה",
         "תנ\"ך"
@@ -43,13 +42,13 @@ class HebrewUniversity:
         },
         {
             "user_input": "סיעוד",
-            "site_option_1": "אחיות (סיעוד)",
-            "site_option_2": "אחיות (סיעוד), חד-חוגי, בי\"ח הדסה"
+            "site_option_1": "אחיוּת (סיעוד)",
+            "site_option_2": "אחיות (סיעוד), חד-חוגי, שלוחת קפלן"
         },
         {
             "user_input": "הנדסת חשמל",
-            "site_option_1": "הנדסת חשמל ומדעי המחשב או",
-            "site_option_2": "הנדסת חשמל ופיסיקה יישומית, חד-חוגי"
+            "site_option_1": "הנדסת חשמל ומדעי המחשב",
+            "site_option_2": "הנדסת חשמל ומדעי המחשב, חד-חוגי"
         },
         {
             "user_input": "משפטים",
@@ -106,8 +105,7 @@ class HebrewUniversity:
             "אנגלית": "אנגלית",
             "היסטוריה": "היסטוריה",
             "אזרחות": "אזרחות",
-            "מתמטיקה": "מתמטיקה",
-            "פיזיקה": "פיזיקה"
+            "מתמטיקה": "מתמטיקה"
         }
     
     SUBJECT_NAME_MAPPING = {
@@ -116,9 +114,17 @@ class HebrewUniversity:
     "עיצוב גרפי": "עיצוב",
     "תרבות ומורשת האסלאם": "מורשת ודת האסלאם",
     'תושב"ע': "תושב\"ע",
-    "מורשת ודת נוצרית": "מורשת דת נוצרית"
+    "מורשת ודת נוצרית": "מורשת דת נוצרית",
+    "פיזיקה": "פיסיקה",
+    "מוזיקה": "מוסיקה",
+    "מערכות בקרה": "מערכות בקרה ממוחשבות",
+    "הנדסת תוכנה": "מדעי המחשב",
+    "ערבית (ליהודים)": "ערבית",
+    "גיאוגרפיה": "גאוגרפיה אדם וסביבה"
+    
 }
-
+    
+    NOT_EXISTING_SUBJECTS = ["חינוך פיננסי", "הנדסת מכונות", "קולנוע","היסטוריה של עם ישראל"]
     
     def __init__(self, service, options):
             self.service = service
@@ -179,10 +185,8 @@ class HebrewUniversity:
         # unpack 3 scores
             total, quant_score, verbal_score, english_score = psycho_scores
 
-            # מחשבים את הדגשים
             emphases = self.calculate_psychometric_emphases(total,verbal_score, quant_score, english_score)
 
-            # שמים את הדגשים בסדר: כמותי, מילולי, רב תחומי
             emphasis_values = [
                 emphases["quant_emphasis"],
                 emphases["verbal_emphasis"],
@@ -231,7 +235,8 @@ class HebrewUniversity:
     def getDriver1(self):    
         
         # driver = webdriver.Chrome(service=self.service)
-        driver = webdriver.Chrome(service=self.service, options=self.options)
+        driver = webdriver.Chrome(service=self.service)
+        # driver = webdriver.Chrome(service=self.service, options=self.options)
 
         driver.get("https://bagrut-calculator.huji.ac.il/calculator/#/grade-input")
 
@@ -318,7 +323,8 @@ class HebrewUniversity:
 
         #add more subjects
         for subject_name in scores.keys():
-            if subject_name not in self.CORE_SUBJECTS:
+            print(f"Processing subject: {subject_name}")
+            if subject_name not in self.CORE_SUBJECTS and subject_name not in self.NOT_EXISTING_SUBJECTS:
 
                 add_span = WebDriverWait(driver, 10).until(
                 EC.presence_of_element_located((By.XPATH, "//span[contains(text(), 'הוסף מקצוע')]"))
@@ -391,8 +397,8 @@ class HebrewUniversity:
     # === second website ===
     def getDriver2(self):
 
-        # service = Service(r"C:\Users\Raz Zana\Desktop\chromedriver-win64\chromedriver.exe")
-        driver = webdriver.Chrome(service=self.service, options=self.options)
+        # driver = webdriver.Chrome(service=self.service, options=self.options)
+        driver = webdriver.Chrome(service=self.service)
         driver.get("https://go.huji.ac.il/?locale=he")
         time.sleep(3)
 
