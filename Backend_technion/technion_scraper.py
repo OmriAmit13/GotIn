@@ -142,7 +142,7 @@ class TechnionUniversity():
             else:
                 isAccepted = None
             return {
-                "isAccepted": None,
+                "isAccepted": isAccepted,
                 "url": url,
                 "message": error_message
             }
