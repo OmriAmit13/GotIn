@@ -185,7 +185,7 @@ class BenGurionUniversity:
             
         # Fill high school subject scores
         self._fill_highschool_scores(driver, wait, highschool_scores)
-
+        
         # Calculate high school average
         average_score = self._calculate_high_school_average(driver, wait)
         
@@ -206,7 +206,7 @@ class BenGurionUniversity:
         
         # Try to view acceptance list directly
         results = self._check_acceptance_list(driver, wait, degrees_to_check)
-
+        
         self.close_browser()
         
         # Original results dictionary with degree-specific results
@@ -306,7 +306,7 @@ class BenGurionUniversity:
                 lambda d: len(d.find_elements(By.CSS_SELECTOR, ".user-field, .subject-field, input.simple-input")) > (i+1)*2
             )
             # Add small pause to ensure field is fully rendered
-            time.sleep(1)
+            time.sleep(0.1)
             
                 # print("✅ Added new subject field")
          
@@ -339,10 +339,10 @@ class BenGurionUniversity:
                     time.sleep(0.1)  # Small pause between characters
                 
                 # Add extra pause to ensure dropdown has time to register
-                time.sleep(1)
+                time.sleep(0.1)
                 
                 # Wait longer for dropdown to appear with options
-                WebDriverWait(driver, 8).until(
+                WebDriverWait(driver, 3).until(
                     lambda d: len(d.find_elements(By.CSS_SELECTOR, ".react-select__menu, .dropdown-menu")) > 0
                 )
                 
@@ -990,243 +990,74 @@ class BenGurionUniversity:
         """
         print("\n🔍 Navigating to acceptance list page...")
         results = {}
-        
+
+        # ודא שהעמוד נטען לגמרי
+        WebDriverWait(driver, 10).until(
+            lambda d: d.execute_script("return document.readyState") == "complete"
+        )
+        time.sleep(2)
+
+        # מצא את הקישור לעמוד תוצאות הקבלה
         try:
-            # Force the page to be fully loaded before attempting to find elements
-            WebDriverWait(driver, 10).until(
-                lambda d: d.execute_script("return document.readyState") == "complete"
-            )
-            time.sleep(2)  # Give extra time for all JavaScript to execute
-            
-          #  print("🔍 Looking for results buttons...")
-            
-            # Based on the exact HTML structure, target the specific link we need
-          #  print("🔍 Looking for the final results link with href='#/final-results'...")
-            
-            # Wait longer for all elements to be fully rendered
-            time.sleep(2)
-            
-            # Try using the exact CSS selector for the link we want - from the HTML code
+            final_results_link = driver.find_element(By.CSS_SELECTOR, "a.page-link[href='#/final-results']")
+        except:
             try:
-                # First try with the most specific selector
-                final_results_link = driver.find_element(By.CSS_SELECTOR, "a.page-link[href='#/final-results']")
-              #  print("✅ Found final results link using exact CSS selector")
+                final_results_link = driver.find_element(By.XPATH, "//a[@href='#/final-results']")
             except:
-                print("⚠️ Could not find link with exact CSS selector, trying XPath...")
-                try:
-                    # Try with XPath as a fallback
-                    final_results_link = driver.find_element(By.XPATH, "//a[@href='#/final-results']")
-                 #  print("✅ Found final results link using XPath")
-                except:
-                    print("⚠️ Could not find link with href='#/final-results', trying text content...")
-                    
-                    # Fall back to looking by text content
-                    links = driver.find_elements(By.TAG_NAME, "a")
-                    final_results_link = None
-                    target_text = "כל תחומי הלימוד אליהם התקבלתי"
-                    
-                    for link in links:
-                        try:
-                            if target_text in link.text:
-                                final_results_link = link
-                              #  print(f"✅ Found link with target text: {link.text}")
-                                break
-                        except:
-                            continue
-                    
-                    if not final_results_link:
-                        # Last resort - third a.page-link on the page
-                        links = driver.find_elements(By.CSS_SELECTOR, "a.page-link")
-                        if len(links) >= 3:
-                            final_results_link = links[2]  # Try the third link
-                            print("⚠️ Using third page-link as fallback")
-                        else:
-                            raise Exception("Could not find the final results link")
-            
-            # Now we have the link element, scroll to it and click it
-          #  print(f"🔘 Attempting to click: {final_results_link.tag_name} with text: '{final_results_link.text}'")
-            driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", final_results_link)
-            time.sleep(1)
-            
-            # Try different click methods in order of reliability
-            try:
-                # Most reliable for links - direct href navigation
-                href = final_results_link.get_attribute('href')
-                if href and href.startswith('#'):
-                    url = driver.current_url.split('#')[0] + href
-                  #  print(f"🔗 Navigating directly to URL: {url}")
-                    driver.get(url)
-                   # print("✅ Navigated directly to link URL")
-                else:
-                    # Try JavaScript click
-                    driver.execute_script("arguments[0].click();", final_results_link)
-                   # print("✅ Clicked link using JavaScript")
-            except:
-                try:
-                    # Try direct click
-                    final_results_link.click()
-                 #   print("✅ Clicked link directly")
-                except Exception as e:
-                   # print(f"❌ All click methods failed: {e}")
-                    raise Exception("Could not click on final results link")
-            
-          #  print("✅ Button click attempt completed")
-            
-            # Wait for page transition
-            WebDriverWait(driver, 3).until(
-                lambda d: d.execute_script("return document.readyState") == "complete"
-            )
-            
-            # Wait for the list to load
-            WebDriverWait(driver, 3).until(
-                lambda d: len(d.find_elements(By.CSS_SELECTOR, "div.content, div.results-container, div")) > 0
-            )
-            
-            # After clicking the button, wait a moment for content to fully load
-            time.sleep(2)
-           # print("🔍 Looking for accepted degrees directly on the page...")
-            
-            # Degree mapping for BGU website
-            degree_mapping = self._get_degree_mapping()
-            
-            # Extract accepted degrees from the page
-            accepted_degrees = []
-            
-            # Try specific selectors for departments first
-            department_items = driver.find_elements(By.CSS_SELECTOR, ".departments-list div, .react-select__option")
-            if department_items:
-                for item in department_items:
-                    item_text = item.text.strip()
-                    if item_text and len(item_text) > 2:  # Skip very short items
-                        accepted_degrees.append(item_text)
-                      #  print(f"📋 Found department: {item_text}")
-            
-            # Then try the general container selectors
-            containers = driver.find_elements(By.CSS_SELECTOR, ".final-results-list, .degrees-list, .results-container, div.item-list")
-            if not containers:
-                containers = driver.find_elements(By.CSS_SELECTOR, "div.content, div.page-content, div.results, ul, ol, div.item")
-            if not containers:
-                containers = driver.find_elements(By.CSS_SELECTOR, "div")
-            
-         #   print(f"🔍 Found {len(containers)} potential containers to check")
-            
-            # Look directly for degrees with "קבלה" icon/text as shown in the screenshot
-           # print("🔍 Looking for degrees with acceptance status directly...")
-            
-            # Based on the screenshot, look for the accordion rows with קבלה icon
-            try:
-                # Find all rows that have the קבלה text/icon
-                acceptance_rows = driver.find_elements(By.XPATH, "//div[contains(@class, 'accordion')]//div[contains(@class, 'accordion_item')]")
-                accepted_degrees = []
-                
-             #   print(f"Found {len(acceptance_rows)} potential degree rows")
-                
-                # Get the actual degree names from these rows
-                for row in acceptance_rows:
-                    try:
-                        # Check if the row contains "קבלה" text
-                        if "קבלה" in row.text:
-                            row_text = row.text.strip()
-                            # Capture the entire row text which should contain the degree name
-                            accepted_degrees.append(row_text)
-                         #  print(f"✅ Found accepted degree row: '{row_text}'")
-                    except:
-                        continue
-                        
-                # If we didn't find degrees with the above method, try more generic approach
-                if not accepted_degrees:
-                    # Look for checkmarks or specific HTML structure 
-                    checkmarks = driver.find_elements(By.CSS_SELECTOR, ".accordion_item svg, .v-icon, .checkmark")
-                    
-                    for check in checkmarks:
-                        try:
-                            # Get parent element which should contain the degree name
-                            parent = check.find_element(By.XPATH, "./ancestor::div[contains(@class, 'accordion_item') or contains(@class, 'row')]")
-                            if parent and "קבלה" in parent.text:
-                                accepted_degrees.append(parent.text)
-                              #  print(f"✅ Found degree with checkmark: '{parent.text}'")
-                        except:
-                            continue
-            except Exception as e:
-                print(f"❌ Error finding acceptance rows: {e}")
-            
-            # If still no results, fall back to searching the entire page
-            if not accepted_degrees:
-             #   print("⚠️ Falling back to whole page search for acceptance indicators")
-                
-                # Look for any spans or divs with "קבלה" as these are likely acceptance indicators
-                acceptance_indicators = driver.find_elements(By.XPATH, 
-                    "//span[contains(text(), 'קבלה')] | //div[contains(text(), 'קבלה')]")
-                
-                for indicator in acceptance_indicators:
-                    try:
-                        # Get the parent row or container that should have the degree name
-                        parent = indicator.find_element(By.XPATH, 
-                            "./ancestor::div[contains(@class, 'row') or contains(@class, 'item') or contains(@class, 'accordion')]")
-                        
-                        if parent:
-                            text = parent.text.strip()
-                            if text and len(text) > 5:  # Ensure it's not just "קבלה" alone
-                                accepted_degrees.append(text)
-                             #   print(f"✅ Found acceptance indicator with parent: '{text}'")
-                    except:
-                        continue
-            
-         #   print(f"📝 Found {len(accepted_degrees)} potential degree entries")
-            
-            # Check each degree for acceptance - use more flexible matching
-            for degree in degrees_to_check:
-                    bgu_degree_name = degree_mapping.get(degree, degree)
-                    clean_bgu_degree = self._clean_degree_name(bgu_degree_name)
-                    
-                    # Only print what we're checking for, not the entire list
-                 #   print(f"🔍 מחפש אם התואר {degree} נמצא ברשימת המתקבלים")
-                    
-                    # First attempt: try to find exact matches or clean matches
-                    is_accepted = False
-                    for accepted in accepted_degrees:
-                        clean_accepted = self._clean_degree_name(accepted)
-                        
-                        # Check if "קבלה" (acceptance) appears in the same line as the degree name
-                        if "קבלה" in accepted and (
-                            clean_accepted == clean_bgu_degree or
-                            accepted.startswith(bgu_degree_name) or
-                            clean_accepted.startswith(clean_bgu_degree) or
-                            bgu_degree_name in accepted or
-                            clean_bgu_degree in clean_accepted):
-                            is_accepted = True
-                          #  print(f"✅ נמצאה התאמה לתואר '{degree}' בשורה '{accepted}'")
-                            break
-                    
-                    # Second attempt: try more flexible token matching
-                    if not is_accepted:
-                        # Split degree into tokens and check if all tokens appear in any accepted degree
-                        degree_tokens = set(clean_bgu_degree.split())
-                        if "הנדסה" in clean_bgu_degree and "הנדסת" not in clean_bgu_degree:
-                            # Add הנדסת variant for more flexible matching
-                            degree_tokens.add("הנדסת")
-                            
-                        for accepted in accepted_degrees:
-                            clean_accepted = self._clean_degree_name(accepted)
-                            accepted_tokens = set(clean_accepted.split())
-                            
-                            # Check if at least half of the tokens match
-                            matches = degree_tokens.intersection(accepted_tokens)
-                            if "קבלה" in accepted and len(matches) >= len(degree_tokens) // 2:
-                                is_accepted = True
-                             #   print(f"✅ נמצאה התאמה חלקית לתואר '{degree}' בשורה '{accepted}'")
-                                break
-                
-                    # Record the result using the original degree name
-                    results[degree] = "התקבלתי" if is_accepted else "לא התקבלתי"
-                   # print(f"📊 תוצאה עבור התואר {degree}: {results[degree]}")
-                
-            return results
-            
-        except Exception as e:
-          #  print(f"❌ Error checking acceptance list: {e}")
-            # Raise the exception to trigger fallback to individual degree checking
-            raise
+                # נסי למצוא לפי טקסט
+                links = driver.find_elements(By.TAG_NAME, "a")
+                final_results_link = next((l for l in links if "כל תחומי הלימוד" in l.text), None)
+
+                if not final_results_link:
+                    links = driver.find_elements(By.CSS_SELECTOR, "a.page-link")
+                    if len(links) >= 3:
+                        final_results_link = links[2]
+                    else:
+                        raise Exception("❌ לא נמצא הקישור לעמוד התוצאות הסופיות")
+
+        # גלילה ולחיצה על הקישור
+        driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", final_results_link)
+        time.sleep(1)
+
+        href = final_results_link.get_attribute('href')
+        if href and href.startswith('#'):
+            url = driver.current_url.split('#')[0] + href
+            driver.get(url)
+        else:
+            driver.execute_script("arguments[0].click();", final_results_link)
+
+        # המתן לטעינה מחדש של העמוד
+        WebDriverWait(driver, 10).until(
+            lambda d: d.execute_script("return document.readyState") == "complete"
+        )
+        time.sleep(2)
+
+        # שלוף את כל הטקסטים של שורות התארים בבת אחת (גישה יעילה!)
+        acceptance_texts = driver.execute_script("""
+            return Array.from(document.querySelectorAll('.accordion_item')).map(el => el.innerText);
+        """)
+
+        degree_mapping = self._get_degree_mapping()
+
+        # בדיקת קבלה לכל תואר
+        for degree in degrees_to_check:
+            bgu_degree_name = degree_mapping.get(degree, degree)
+            clean_bgu_degree = self._clean_degree_name(bgu_degree_name)
+
+            is_accepted = False
+            for text in acceptance_texts:
+                if "קבלה" in text:
+                    clean_text = self._clean_degree_name(text)
+                    if (clean_bgu_degree in clean_text or
+                        clean_text.startswith(clean_bgu_degree)):
+                        is_accepted = True
+                        break
+
+            results[degree] = "התקבלתי" if is_accepted else "לא התקבלתי"
+
+        return results
+
+
     
     def _check_degree_acceptance(self, driver, wait, degrees_to_check):
         """
