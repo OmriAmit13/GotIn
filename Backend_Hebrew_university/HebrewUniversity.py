@@ -536,7 +536,7 @@ class HebrewUniversity:
             self.secondPageOfCalculator(driver1,hs_dict)
             if self.msg is not None:
                 driver1.quit()
-                return {"isAccepted": None, "url": None, "message": self.msg}
+                return {"isAccepted": "דחייה", "url": "https://go.huji.ac.il/?locale=he", "message": self.msg}
             
             highschool_score = self.thirdPageOfCalculator(driver1)
 
