@@ -120,6 +120,7 @@ You can modify these port numbers in the config file to match your environment r
 │
 ├── startWebsite.sh          # Script to start all services
 ├── stopWebsite.sh           # Script to stop all services
+
 ```
 
 ## Technologies Used
