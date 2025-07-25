@@ -71,18 +71,6 @@ This will:
 
 This will terminate all running backend servers.
 
-## Running the tests
-
-1. Make the tests script executable:
-```bash
-chmod +x runTests.sh
-```
-
-2. Run the tests script:
-```bash
-./runTests.sh
-```
-
 ## Port Configuration
 
 The application uses a central `config.json` file in the root directory to manage port configurations for all backend services. The default configuration is:
@@ -130,13 +118,8 @@ You can modify these port numbers in the config file to match your environment r
 │   ├── app.py
 │   └── TelAvivUniversity.py
 │
-├── Tests/                    # Test suite
-│   ├── runTests.py
-│   └── testData.json
-│
 ├── startWebsite.sh          # Script to start all services
 ├── stopWebsite.sh           # Script to stop all services
-└── runTests.sh           # Script to run all tests
 ```
 
 ## Technologies Used
@@ -152,10 +135,6 @@ You can modify these port numbers in the config file to match your environment r
   - Flask-CORS (Cross-Origin Resource Sharing)
   - Selenium (Web Scraping)
   - Chrome WebDriver (Browser Automation)
-
-- **Testing:**
-  - Python unittest framework
-  - JSON test data
 
 ## Cross-Platform Compatibility
 
